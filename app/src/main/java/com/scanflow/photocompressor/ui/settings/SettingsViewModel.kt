@@ -7,7 +7,10 @@ import com.scanflow.photocompressor.domain.model.AppPreferences
 import com.scanflow.photocompressor.domain.model.ConflictStrategy
 import com.scanflow.photocompressor.domain.model.ImageFormat
 import com.scanflow.photocompressor.domain.model.ThemeMode
+import com.scanflow.photocompressor.domain.billing.BillingConstants
+import com.scanflow.photocompressor.domain.billing.BillingManager
 import com.scanflow.photocompressor.domain.repository.PreferencesRepository
+import com.scanflow.photocompressor.domain.repository.UserTierRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -23,13 +26,16 @@ data class SettingsUiState(
     val outputFileCount: Int = 0,
     val availableStorage: String = "Calculating...",
     val outputDirectoryPath: String = "",
+    val isPro: Boolean = false,
     val message: String? = null
 )
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val fileManager: FileManager,
-    private val preferencesRepository: PreferencesRepository
+    private val preferencesRepository: PreferencesRepository,
+    private val userTierRepository: UserTierRepository,
+    private val billingManager: BillingManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SettingsUiState())
@@ -38,6 +44,15 @@ class SettingsViewModel @Inject constructor(
     init {
         refreshStorageStats()
         observePreferences()
+        observeEntitlement()
+    }
+
+    private fun observeEntitlement() {
+        viewModelScope.launch {
+            userTierRepository.currentTier.collect { tier ->
+                _uiState.update { it.copy(isPro = (tier == com.scanflow.photocompressor.domain.model.UserTier.PRO)) }
+            }
+        }
     }
 
     private fun observePreferences() {
@@ -119,6 +134,28 @@ class SettingsViewModel @Inject constructor(
             fileManager.cleanTempFiles()
             refreshStorageStats()
             _uiState.update { it.copy(message = "Cache cleared successfully") }
+        }
+    }
+
+    fun upgradeToPro(activity: android.app.Activity, productId: String = BillingConstants.SKU_PRO_LIFETIME) {
+        viewModelScope.launch {
+            val result = billingManager.launchBillingFlow(activity, productId)
+            if (result.isSuccess) {
+                _uiState.update { it.copy(message = "ScanFlow Pro activated successfully!") }
+            } else {
+                _uiState.update { it.copy(message = result.exceptionOrNull()?.message ?: "Purchase could not be completed") }
+            }
+        }
+    }
+
+    fun restorePurchases() {
+        viewModelScope.launch {
+            val result = billingManager.restorePurchases()
+            if (result.isSuccess && result.getOrNull()?.isActivePro == true) {
+                _uiState.update { it.copy(message = "Purchases restored: ScanFlow Pro is active.") }
+            } else {
+                _uiState.update { it.copy(message = "No active subscription found to restore.") }
+            }
         }
     }
 

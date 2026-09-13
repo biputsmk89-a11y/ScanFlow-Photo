@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ScanFlow Photo - 100% Offline Image Compressor & Photo Tools</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #3b82f6;
+            --primary-gradient: linear-gradient(135deg, #2563eb, #3b82f6);
+            --bg: #0b0f19;
+            --surface: #111827;
+            --surface-card: #1f2937;
+            --border: #374151;
+            --text-main: #f9fafb;
+            --text-muted: #9ca3af;
+            --accent-green: #10b981;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        header {
+            width: 100%;
+            max-width: 1100px;
+            padding: 24px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .logo {
+            font-weight: 800;
+            font-size: 1.35rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #ffffff;
+            text-decoration: none;
+        }
+
+        .logo-badge {
+            background: #2563eb;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+        }
+
+        nav a {
+            color: var(--text-muted);
+            text-decoration: none;
+            margin-left: 20px;
+            font-size: 0.95rem;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+
+        nav a:hover {
+            color: #ffffff;
+        }
+
+        .hero {
+            max-width: 900px;
+            text-align: center;
+            padding: 80px 20px 40px;
+        }
+
+        .hero-tag {
+            display: inline-block;
+            background: rgba(59, 130, 246, 0.15);
+            color: #60a5fa;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            padding: 6px 16px;
+            border-radius: 9999px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 24px;
+        }
+
+        .hero h1 {
+            font-size: 3rem;
+            font-weight: 800;
+            line-height: 1.2;
+            margin-bottom: 20px;
+            background: linear-gradient(135deg, #ffffff 60%, #9ca3af 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero p {
+            font-size: 1.2rem;
+            color: var(--text-muted);
+            line-height: 1.6;
+            margin-bottom: 36px;
+        }
+
+        .cta-group {
+            display: flex;
+            gap: 16px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 14px 28px;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 1rem;
+            text-decoration: none;
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: var(--primary-gradient);
+            color: white;
+            box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(37, 99, 235, 0.6);
+        }
+
+        .btn-secondary {
+            background: var(--surface-card);
+            color: var(--text-main);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            background: #283548;
+            transform: translateY(-2px);
+        }
+
+        .features {
+            max-width: 1100px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 24px;
+            padding: 40px 20px 80px;
+            width: 100%;
+        }
+
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 28px;
+            transition: border-color 0.2s;
+        }
+
+        .card:hover {
+            border-color: #4b5563;
+        }
+
+        .card-icon {
+            font-size: 2rem;
+            margin-bottom: 16px;
+        }
+
+        .card h3 {
+            font-size: 1.2rem;
+            margin-bottom: 8px;
+            color: #ffffff;
+        }
+
+        .card p {
+            font-size: 0.92rem;
+            color: var(--text-muted);
+            line-height: 1.5;
+        }
+
+        footer {
+            margin-top: auto;
+            width: 100%;
+            border-top: 1px solid var(--border);
+            padding: 24px 20px;
+            text-align: center;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <a href="#" class="logo">
+            <span>ScanFlow Photo</span>
+            <span class="logo-badge">v1.0.0</span>
+        </a>
+        <nav>
+            <a href="privacy-policy.html">Privacy Policy</a>
+            <a href="https://github.com/biputsmk89-a11y/ScanFlow-Photo" target="_blank">GitHub</a>
+            <a href="https://github.com/biputsmk89-a11y/ScanFlow-Photo/releases" target="_blank">Releases</a>
+        </nav>
+    </header>
+
+    <main class="hero">
+        <span class="hero-tag">🔒 100% Offline & Private Image Processing</span>
+        <h1>Studio-Grade Image Tools.<br>Zero Cloud. Zero Compromise.</h1>
+        <p>Compress, resize, crop, and convert photos directly on your device. Generate official passport ID sheets and high-quality PDF albums with lightning performance.</p>
+        
+        <div class="cta-group">
+            <a href="https://github.com/biputsmk89-a11y/ScanFlow-Photo/releases/latest" class="btn btn-primary">
+                ⬇ Download APK (v1.0.0)
+            </a>
+            <a href="privacy-policy.html" class="btn btn-secondary">
+                📄 View Privacy Policy
+            </a>
+        </div>
+    </main>
+
+    <section class="features">
+        <div class="card">
+            <div class="card-icon">⚡</div>
+            <h3>Smart Compression</h3>
+            <p>Target exact file size limits (e.g. under 200 KB) with iterative binary search and SSIM perceptual quality analysis.</p>
+        </div>
+        <div class="card">
+            <div class="card-icon">📁</div>
+            <h3>High-Speed Batch Engine</h3>
+            <p>Process up to 100 photos in parallel with memory-safe bounded coroutines, pausing, resuming, and auto-rollback.</p>
+        </div>
+        <div class="card">
+            <div class="card-icon">🛂</div>
+            <h3>Passport & ID Studio</h3>
+            <p>Standard 2×3, 3×4, 4×6 photo presets with corner-seeded background replacement and print sheet tiling.</p>
+        </div>
+        <div class="card">
+            <div class="card-icon">📄</div>
+            <h3>Multi-Image to PDF</h3>
+            <p>Combine multiple high-res photos into clean, compressed, single or multi-page PDF documents effortlessly.</p>
+        </div>
+        <div class="card">
+            <div class="card-icon">🛡️</div>
+            <h3>EXIF & Metadata Stripper</h3>
+            <p>Strip GPS coordinates, device serial numbers, and camera tags before sharing to protect your personal privacy.</p>
+        </div>
+        <div class="card">
+            <div class="card-icon">🚀</div>
+            <h3>100% Offline Core</h3>
+            <p>No account required, no remote servers, no tracking SDKs. Everything runs natively on your Android phone.</p>
+        </div>
+    </section>
+
+    <footer>
+        &copy; 2026 ScanFlow Photo. Released under open-source MIT-friendly architecture &bull; <a href="privacy-policy.html" style="color: #60a5fa;">Privacy Policy</a>
+    </footer>
+</body>
+</html>

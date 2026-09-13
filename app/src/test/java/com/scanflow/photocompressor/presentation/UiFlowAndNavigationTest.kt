@@ -266,7 +266,12 @@ class UiFlowAndNavigationTest {
         val initialPrefs = AppPreferences(theme = ThemeMode.SYSTEM, defaultQuality = 80)
         every { prefsRepo.preferencesFlow } returns flowOf(initialPrefs)
 
-        val viewModel = SettingsViewModel(mockk(relaxed = true), prefsRepo)
+        val viewModel = SettingsViewModel(
+            fileManager = mockk(relaxed = true),
+            preferencesRepository = prefsRepo,
+            userTierRepository = mockk(relaxed = true),
+            billingManager = mockk(relaxed = true)
+        )
         testScheduler.advanceUntilIdle()
 
         viewModel.setThemeMode(ThemeMode.DARK)

@@ -19,9 +19,10 @@ import javax.inject.Singleton
  */
 @Singleton
 class BillingManagerImpl @Inject constructor(
-    private val entitlementRepository: EntitlementRepository,
-    private val serverVerificationProvider: ServerVerificationProvider? = null
+    private val entitlementRepository: EntitlementRepository
 ) : BillingManager {
+
+    var serverVerificationProvider: ServerVerificationProvider? = null
 
     private val _purchaseState = MutableStateFlow<PurchaseState>(PurchaseState.Idle)
     override val purchaseState: StateFlow<PurchaseState> = _purchaseState.asStateFlow()
@@ -38,8 +39,9 @@ class BillingManagerImpl @Inject constructor(
         // Upon purchase token receipt, delegates to ServerVerificationProvider if configured.
         return try {
             // Simulate / handle local development or forward to server verification
-            val entitlement = if (serverVerificationProvider != null) {
-                serverVerificationProvider.verifyPurchase("mock_order_123", "mock_token_abc", productId).getOrThrow()
+            val provider = serverVerificationProvider
+            val entitlement = if (provider != null) {
+                provider.verifyPurchase("mock_order_123", "mock_token_abc", productId).getOrThrow()
             } else {
                 UserEntitlement(isPro = true, productId = productId, expiryTime = null)
             }

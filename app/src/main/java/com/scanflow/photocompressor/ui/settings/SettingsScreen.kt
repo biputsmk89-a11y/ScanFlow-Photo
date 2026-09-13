@@ -22,6 +22,12 @@ import com.scanflow.photocompressor.domain.model.ConflictStrategy
 import com.scanflow.photocompressor.domain.model.ImageFormat
 import com.scanflow.photocompressor.domain.model.ThemeMode
 
+import android.app.Activity
+import android.content.Intent
+import android.net.Uri
+import androidx.compose.ui.platform.LocalContext
+import com.scanflow.photocompressor.ui.components.ProPaywallSheet
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
@@ -29,12 +35,30 @@ fun SettingsScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+    val context = LocalContext.current
+    var showPaywall by remember { mutableStateOf(false) }
 
     LaunchedEffect(uiState.message) {
         uiState.message?.let { msg ->
             snackbarHostState.showSnackbar(msg)
             viewModel.clearMessage()
         }
+    }
+
+    if (showPaywall) {
+        ProPaywallSheet(
+            onDismiss = { showPaywall = false },
+            onUpgradeClicked = {
+                showPaywall = false
+                (context as? Activity)?.let { act ->
+                    viewModel.upgradeToPro(act)
+                }
+            },
+            onRestoreClicked = {
+                showPaywall = false
+                viewModel.restorePurchases()
+            }
+        )
     }
 
     Scaffold(
@@ -49,6 +73,58 @@ fun SettingsScreen(
         ) {
             item {
                 Text("Settings", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+            }
+
+            // Pro Membership Card
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (uiState.isPro) 
+                            MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.6f) 
+                        else 
+                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                            Icon(
+                                Icons.Filled.Star,
+                                contentDescription = null,
+                                tint = if (uiState.isPro) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(32.dp)
+                            )
+                            Spacer(Modifier.width(12.dp))
+                            Column {
+                                Text(
+                                    text = if (uiState.isPro) "ScanFlow Pro Active" else "ScanFlow Free Tier",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = if (uiState.isPro) "Unlimited batching & all features unlocked" else "Upgrade for unlimited batching & zero ads",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                        if (!uiState.isPro) {
+                            Button(
+                                onClick = { showPaywall = true },
+                                shape = RoundedCornerShape(10.dp)
+                            ) {
+                                Text("Upgrade")
+                            }
+                        }
+                    }
+                }
             }
 
             // About banner
@@ -295,6 +371,32 @@ fun SettingsScreen(
                     title = "Clear Cache & Temporary Processing Files",
                     subtitle = "Temporary files: ${uiState.cacheSize}",
                     onClick = { viewModel.clearCache() }
+                )
+            }
+
+            // Privacy & Transparency
+            item { Text("Privacy & Legal", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary) }
+
+            item {
+                SettingsItem(
+                    icon = Icons.Filled.Security,
+                    title = "100% Offline Processing",
+                    subtitle = "All compression & photo processing runs strictly on-device. Zero data collected."
+                )
+            }
+            item {
+                SettingsItem(
+                    icon = Icons.Filled.Policy,
+                    title = "Privacy Policy",
+                    subtitle = "View full privacy policy on GitHub Pages",
+                    onClick = {
+                        try {
+                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://biputsmk89-a11y.github.io/ScanFlow-Photo/privacy-policy.html"))
+                            context.startActivity(intent)
+                        } catch (e: Exception) {
+                            // Fallback if browser is unavailable
+                        }
+                    }
                 )
             }
 
