@@ -128,12 +128,10 @@ class BatchViewModel @Inject constructor(
      */
     fun cancelBatch() {
         batchJobInstance?.cancel()
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                fileManager.cleanTempFiles()
-            } catch (e: Exception) {
-                Log.w("BatchViewModel", "Failed to clean temp files during cancel: ${e.message}")
-            }
+        try {
+            fileManager.cleanTempFiles()
+        } catch (e: Exception) {
+            Log.w("BatchViewModel", "Failed to clean temp files during cancel: ${e.message}")
         }
         _uiState.update { current ->
             val updated = current.batchJob?.let { job ->
@@ -195,12 +193,10 @@ class BatchViewModel @Inject constructor(
 
     fun reset() {
         batchJobInstance?.cancel()
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                fileManager.cleanTempFiles()
-            } catch (e: Exception) {
-                Log.w("BatchViewModel", "Failed to clean temp files during reset: ${e.message}")
-            }
+        try {
+            fileManager.cleanTempFiles()
+        } catch (e: Exception) {
+            Log.w("BatchViewModel", "Failed to clean temp files during reset: ${e.message}")
         }
         _uiState.value = BatchUiState(
             presets = _uiState.value.presets,

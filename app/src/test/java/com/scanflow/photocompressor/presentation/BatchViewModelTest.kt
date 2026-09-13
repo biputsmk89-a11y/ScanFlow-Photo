@@ -115,7 +115,8 @@ class BatchViewModelTest {
         assertFalse(state.isProcessing)
         assertNotNull(state.batchJob)
 
-        val finalItems = state.batchJob!!.items
+        val finalItems = state.batchJob?.items ?: emptyList()
+        assertTrue(finalItems.isNotEmpty())
         // Item 1 (SUCCESS) preserved
         assertEquals(BatchItemStatus.SUCCESS, finalItems[0].status)
         // Item 2 and 3 became CANCELLED
