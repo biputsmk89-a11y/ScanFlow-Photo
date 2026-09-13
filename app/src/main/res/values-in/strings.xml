@@ -1,0 +1,122 @@
+<resources>
+    <string name="app_name">ScanFlow Photo</string>
+    <string name="app_description">Kompres, ubah ukuran, potong, konversi, dan optimalkan foto dengan cepat dan privat.</string>
+    <string name="privacy_badge">100% Offline &amp; Privat</string>
+    <string name="no_account_badge">Tanpa Perlu Login</string>
+    <string name="no_account_desc">Semua pemrosesan foto utama dilakukan secara lokal pada perangkat Anda tanpa memerlukan akun.</string>
+
+    <!-- Navigation & Common -->
+    <string name="nav_home">Beranda</string>
+    <string name="nav_history">Riwayat</string>
+    <string name="nav_settings">Pengaturan</string>
+    <string name="action_back">Kembali</string>
+    <string name="action_close">Tutup</string>
+    <string name="action_share">Bagikan</string>
+    <string name="action_save">Simpan</string>
+    <string name="action_delete">Hapus</string>
+    <string name="action_cancel">Batal</string>
+    <string name="action_confirm">Konfirmasi</string>
+    <string name="action_clear_all">Hapus Semua</string>
+    <string name="action_apply">Terapkan</string>
+    <string name="action_reset">Reset</string>
+    <string name="action_pick_image">Pilih Foto</string>
+    <string name="action_select_photos">Pilih Foto</string>
+
+    <!-- Tools -->
+    <string name="tool_compress">Kompres</string>
+    <string name="tool_batch">Batch</string>
+    <string name="tool_resize">Ubah Ukuran</string>
+    <string name="tool_crop">Potong (Crop)</string>
+    <string name="tool_rotate">Putar</string>
+    <string name="tool_watermark">Watermark</string>
+    <string name="tool_convert">Konversi</string>
+    <string name="tool_pdf">Foto ke PDF</string>
+    <string name="tool_passport">Pasfoto</string>
+    <string name="tool_social">Media Sosial</string>
+    <string name="tool_whatsapp">Siap WhatsApp</string>
+
+    <!-- Compress Screen & Modes -->
+    <string name="title_compress">Kompres Foto</string>
+    <string name="mode_quick">Kompres Cepat</string>
+    <string name="mode_target_size">Target Ukuran File</string>
+    <string name="mode_advanced">Mode Lanjutan</string>
+    <string name="preset_balanced">Seimbang (Rekomendasi)</string>
+    <string name="preset_high_quality">Kualitas Tinggi</string>
+    <string name="preset_small">Ukuran File Kecil</string>
+    <string name="action_compress_photos_semantic">Kompres foto yang dipilih</string>
+    <string name="msg_compressing">Mengompresi foto via pipeline pemrosesan…</string>
+    <string name="msg_compression_complete">Kompresi selesai!</string>
+
+    <!-- Metrics (Rule 68) -->
+    <string name="metric_before">Sebelum</string>
+    <string name="metric_after">Sesudah</string>
+    <string name="metric_saved">Dihemat</string>
+    <string name="metric_reduction">Pengurangan</string>
+
+    <!-- WhatsApp Ready (Rule 68) -->
+    <string name="title_whatsapp">Siap WhatsApp</string>
+    <string name="whatsapp_tier_small">Kecil</string>
+    <string name="whatsapp_tier_small_desc">Ringkas &amp; berbagi cepat (hemat kuota)</string>
+    <string name="whatsapp_tier_balanced">Seimbang</string>
+    <string name="whatsapp_tier_balanced_desc">Standar foto chat WhatsApp (Rekomendasi)</string>
+    <string name="whatsapp_tier_high_quality">Kualitas Tinggi</string>
+    <string name="whatsapp_tier_high_quality_desc">Detail maksimal &amp; kejernihan foto HD</string>
+    <string name="whatsapp_tier_custom">Kustom</string>
+    <string name="whatsapp_tier_custom_desc">Preferensi dimensi dan kualitas kustom</string>
+    <string name="action_optimize_whatsapp_semantic">Optimalkan foto untuk dikirim lewat WhatsApp</string>
+    <string name="action_share_whatsapp">Bagikan ke WhatsApp</string>
+
+    <!-- Social Media (Rule 67) -->
+    <string name="title_social">Siap Media Sosial</string>
+    <string name="step_select_platform">2. Pilih Platform</string>
+    <string name="step_select_content_type">3. Pilih Jenis Konten</string>
+    <string name="action_process_social_semantic">Proses foto untuk media sosial</string>
+
+    <!-- Passport & ID Photo (Rule 69) -->
+    <string name="title_passport">Pasfoto &amp; Kartu Identitas</string>
+    <string name="passport_disclaimer">Check the submission requirements before printing.</string>
+    <string name="passport_face_guidance_title">Panduan Posisi Wajah</string>
+    <string name="passport_face_guidance_desc">Posisikan wajah di dalam oval: mata pada garis atas, dagu pada garis bawah.</string>
+    <string name="passport_preset_title">Pilih Preset</string>
+    <string name="passport_background_title">Warna Latar Belakang</string>
+    <string name="passport_print_layout_title">Tata Letak Cetak (Salinan per lembar)</string>
+    <string name="passport_cut_marks">Tambahkan garis panduan potong (garis putus-putus)</string>
+    <string name="action_generate_passport_semantic">Buat lembar cetak pasfoto</string>
+
+    <!-- Image to PDF (Rule 70) -->
+    <string name="title_pdf">Foto ke PDF</string>
+    <string name="pdf_page_size_title">Ukuran Halaman</string>
+    <string name="pdf_orientation_title">Orientasi</string>
+    <string name="pdf_margins_title">Margin</string>
+    <string name="pdf_quality_title">Kualitas</string>
+    <string name="action_generate_pdf_semantic">Buat dokumen PDF dari foto</string>
+
+    <!-- Free / Pro & Feature Gating (Rules 71, 72, 73, 74) -->
+    <string name="badge_pro">PRO</string>
+    <string name="title_unlock_pro">Buka ScanFlow Pro</string>
+    <string name="desc_unlock_pro">Dapatkan fitur penuh: batch tak terbatas, alat foto lanjutan, output tanpa kompresi rusak, dan bebas iklan.</string>
+    <string name="action_upgrade_pro">Upgrade ke Pro</string>
+    <string name="action_restore_purchases">Pulihkan Pembelian</string>
+
+    <!-- General Labels & Errors -->
+    <string name="label_quality">Kualitas</string>
+    <string name="label_format">Format</string>
+    <string name="label_width">Lebar</string>
+    <string name="label_height">Tinggi</string>
+    <string name="label_original">Asli</string>
+    <string name="label_result">Hasil</string>
+    <string name="msg_processing">Memproses…</string>
+    <string name="msg_no_history">Belum ada riwayat</string>
+    <string name="msg_error_loading">Gagal memuat foto</string>
+    <string name="msg_feature_restricted">Fitur ini memerlukan ScanFlow Pro.</string>
+
+    <!-- Theme Settings (Rule 78) -->
+    <string name="theme_appearance_title">Tampilan &amp; Tema</string>
+    <string name="theme_mode">Mode Tema</string>
+    <string name="theme_system">Sistem</string>
+    <string name="theme_system_desc">Mengikuti pengaturan sistem (Bawaan)</string>
+    <string name="theme_light">Terang</string>
+    <string name="theme_light_desc">Tampilan terang elegan (Utama)</string>
+    <string name="theme_dark">Gelap</string>
+    <string name="theme_dark_desc">Tema gelap nyaman untuk pencahayaan redup</string>
+</resources>

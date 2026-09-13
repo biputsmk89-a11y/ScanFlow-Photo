@@ -1,0 +1,122 @@
+<resources>
+    <string name="app_name">ScanFlow Photo</string>
+    <string name="app_description">Compress, resize, crop, convert, and optimize images quickly and privately.</string>
+    <string name="privacy_badge">100% Offline &amp; Private</string>
+    <string name="no_account_badge">No Login Required</string>
+    <string name="no_account_desc">All core photo processing is performed locally on your device without an account.</string>
+
+    <!-- Navigation & Common -->
+    <string name="nav_home">Home</string>
+    <string name="nav_history">History</string>
+    <string name="nav_settings">Settings</string>
+    <string name="action_back">Back</string>
+    <string name="action_close">Close</string>
+    <string name="action_share">Share</string>
+    <string name="action_save">Save</string>
+    <string name="action_delete">Delete</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_confirm">Confirm</string>
+    <string name="action_clear_all">Clear All</string>
+    <string name="action_apply">Apply</string>
+    <string name="action_reset">Reset</string>
+    <string name="action_pick_image">Pick Image</string>
+    <string name="action_select_photos">Select Photos</string>
+
+    <!-- Tools -->
+    <string name="tool_compress">Compress</string>
+    <string name="tool_batch">Batch</string>
+    <string name="tool_resize">Resize</string>
+    <string name="tool_crop">Crop</string>
+    <string name="tool_rotate">Rotate</string>
+    <string name="tool_watermark">Watermark</string>
+    <string name="tool_convert">Convert</string>
+    <string name="tool_pdf">Image to PDF</string>
+    <string name="tool_passport">Passport Photo</string>
+    <string name="tool_social">Social Media</string>
+    <string name="tool_whatsapp">WhatsApp Ready</string>
+
+    <!-- Compress Screen & Modes -->
+    <string name="title_compress">Compress Photos</string>
+    <string name="mode_quick">Quick Compress</string>
+    <string name="mode_target_size">Target File Size</string>
+    <string name="mode_advanced">Advanced Mode</string>
+    <string name="preset_balanced">Balanced (Recommended)</string>
+    <string name="preset_high_quality">High Quality</string>
+    <string name="preset_small">Small File Size</string>
+    <string name="action_compress_photos_semantic">Compress selected photos</string>
+    <string name="msg_compressing">Compressing photos via image pipeline…</string>
+    <string name="msg_compression_complete">Compression complete!</string>
+
+    <!-- Metrics (Rule 68) -->
+    <string name="metric_before">Before</string>
+    <string name="metric_after">After</string>
+    <string name="metric_saved">Saved</string>
+    <string name="metric_reduction">Reduction</string>
+
+    <!-- WhatsApp Ready (Rule 68) -->
+    <string name="title_whatsapp">WhatsApp Ready</string>
+    <string name="whatsapp_tier_small">Small</string>
+    <string name="whatsapp_tier_small_desc">Compact &amp; fast sharing (low data usage)</string>
+    <string name="whatsapp_tier_balanced">Balanced</string>
+    <string name="whatsapp_tier_balanced_desc">Standard WhatsApp chat photo (Recommended)</string>
+    <string name="whatsapp_tier_high_quality">High Quality</string>
+    <string name="whatsapp_tier_high_quality_desc">Maximum detail &amp; HD photo clarity</string>
+    <string name="whatsapp_tier_custom">Custom</string>
+    <string name="whatsapp_tier_custom_desc">Custom dimension and quality preferences</string>
+    <string name="action_optimize_whatsapp_semantic">Optimize photo for WhatsApp sharing</string>
+    <string name="action_share_whatsapp">Share to WhatsApp</string>
+
+    <!-- Social Media (Rule 67) -->
+    <string name="title_social">Social Media Ready</string>
+    <string name="step_select_platform">2. Select Platform</string>
+    <string name="step_select_content_type">3. Select Content Type</string>
+    <string name="action_process_social_semantic">Process photo for social media</string>
+
+    <!-- Passport & ID Photo (Rule 69) -->
+    <string name="title_passport">Passport &amp; ID Photo</string>
+    <string name="passport_disclaimer">Check the submission requirements before printing.</string>
+    <string name="passport_face_guidance_title">Face Guidance Preview</string>
+    <string name="passport_face_guidance_desc">Align face within oval: eyes on upper line, chin on lower line.</string>
+    <string name="passport_preset_title">Select Preset</string>
+    <string name="passport_background_title">Background Color</string>
+    <string name="passport_print_layout_title">Print Layout (Copies per sheet)</string>
+    <string name="passport_cut_marks">Add cut guide marks (dashed lines)</string>
+    <string name="action_generate_passport_semantic">Generate passport photo sheet</string>
+
+    <!-- Image to PDF (Rule 70) -->
+    <string name="title_pdf">Image to PDF</string>
+    <string name="pdf_page_size_title">Page Size</string>
+    <string name="pdf_orientation_title">Orientation</string>
+    <string name="pdf_margins_title">Margins</string>
+    <string name="pdf_quality_title">Quality</string>
+    <string name="action_generate_pdf_semantic">Generate PDF document from photos</string>
+
+    <!-- Free / Pro & Feature Gating (Rules 71, 72, 73, 74) -->
+    <string name="badge_pro">PRO</string>
+    <string name="title_unlock_pro">Unlock ScanFlow Pro</string>
+    <string name="desc_unlock_pro">Unleash full power: unlimited batching, advanced photo tools, lossless output, and ad-free experience.</string>
+    <string name="action_upgrade_pro">Upgrade to Pro</string>
+    <string name="action_restore_purchases">Restore Purchases</string>
+
+    <!-- General Labels & Errors -->
+    <string name="label_quality">Quality</string>
+    <string name="label_format">Format</string>
+    <string name="label_width">Width</string>
+    <string name="label_height">Height</string>
+    <string name="label_original">Original</string>
+    <string name="label_result">Result</string>
+    <string name="msg_processing">Processing…</string>
+    <string name="msg_no_history">No history yet</string>
+    <string name="msg_error_loading">Failed to load image</string>
+    <string name="msg_feature_restricted">This feature requires ScanFlow Pro.</string>
+
+    <!-- Theme Settings (Rule 78) -->
+    <string name="theme_appearance_title">Appearance &amp; Theme</string>
+    <string name="theme_mode">Theme Mode</string>
+    <string name="theme_system">System</string>
+    <string name="theme_system_desc">Follow system settings (Default)</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_light_desc">Polished light experience (Primary)</string>
+    <string name="theme_dark">Dark</string>
+    <string name="theme_dark_desc">Sleek dark theme for low light</string>
+</resources>
