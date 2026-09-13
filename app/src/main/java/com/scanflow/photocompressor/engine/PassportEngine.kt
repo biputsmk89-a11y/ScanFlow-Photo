@@ -88,10 +88,37 @@ class PassportEngine @Inject constructor(
                 config.spec.targetHeightPx
             )
 
+            // 1.5 APPLY USER POSITION TRANSFORMS (Zoom, Pan, Rotation) if modified
+            if (config.zoom != 1.0f || config.panX != 0f || config.panY != 0f || config.rotationDegrees != 0f) {
+                val transformed = Bitmap.createBitmap(
+                    config.spec.targetWidthPx,
+                    config.spec.targetHeightPx,
+                    Bitmap.Config.ARGB_8888
+                )
+                val transformCanvas = Canvas(transformed)
+                val matrix = android.graphics.Matrix().apply {
+                    postTranslate(-passportBitmap.width / 2f, -passportBitmap.height / 2f)
+                    postScale(config.zoom, config.zoom)
+                    postRotate(config.rotationDegrees)
+                    postTranslate(
+                        (passportBitmap.width / 2f) + config.panX,
+                        (passportBitmap.height / 2f) + config.panY
+                    )
+                }
+                transformCanvas.drawBitmap(passportBitmap, matrix, Paint(Paint.FILTER_BITMAP_FLAG))
+                passportBitmap.recycle()
+                passportBitmap = transformed
+            }
+
             // 2. BACKGROUND PROCESSING (if background color requested)
-            val bgColor = config.background.colorInt
+            val bgColor = config.effectiveBackgroundColor
             if (bgColor != null) {
                 passportBitmap = applyBackgroundTintOrColor(passportBitmap, bgColor)
+            }
+
+            // 2.5 ID FRAME ENGINE (Thin, Classic, Professional)
+            if (config.frameStyle != IdFrameStyle.NONE) {
+                passportBitmap = applyIdFrame(passportBitmap, config.frameStyle)
             }
 
             // 3. PRINT LAYOUT COMPOSITION
@@ -291,6 +318,72 @@ class PassportEngine @Inject constructor(
                 isAntiAlias = true
             }
             canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), borderPaint)
+        }
+
+        if (result !== bitmap) {
+            bitmap.recycle()
+        }
+        return result
+    }
+
+    private fun applyIdFrame(bitmap: Bitmap, frameStyle: IdFrameStyle): Bitmap {
+        if (frameStyle == IdFrameStyle.NONE) return bitmap
+
+        val width = bitmap.width
+        val height = bitmap.height
+        val result = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(result)
+
+        // Draw base bitmap
+        canvas.drawBitmap(bitmap, 0f, 0f, null)
+
+        when (frameStyle) {
+            IdFrameStyle.NONE -> { /* No op */ }
+            IdFrameStyle.THIN -> {
+                val borderPaint = Paint().apply {
+                    color = Color.WHITE
+                    style = Paint.Style.STROKE
+                    strokeWidth = 3f
+                    isAntiAlias = true
+                }
+                canvas.drawRect(1.5f, 1.5f, width - 1.5f, height - 1.5f, borderPaint)
+            }
+            IdFrameStyle.CLASSIC -> {
+                // Outer 6px border with 1px hairline
+                val outerPaint = Paint().apply {
+                    color = Color.WHITE
+                    style = Paint.Style.STROKE
+                    strokeWidth = 6f
+                    isAntiAlias = true
+                }
+                canvas.drawRect(3f, 3f, width - 3f, height - 3f, outerPaint)
+
+                val hairlinePaint = Paint().apply {
+                    color = Color.LTGRAY
+                    style = Paint.Style.STROKE
+                    strokeWidth = 1f
+                    isAntiAlias = true
+                }
+                canvas.drawRect(6.5f, 6.5f, width - 6.5f, height - 6.5f, hairlinePaint)
+            }
+            IdFrameStyle.PROFESSIONAL -> {
+                // Formal ID Card Border: 8px frame with crisp safe-area inner margin
+                val whiteFramePaint = Paint().apply {
+                    color = Color.WHITE
+                    style = Paint.Style.STROKE
+                    strokeWidth = 8f
+                    isAntiAlias = true
+                }
+                canvas.drawRect(4f, 4f, width - 4f, height - 4f, whiteFramePaint)
+
+                val innerGuidePaint = Paint().apply {
+                    color = Color.rgb(200, 200, 200)
+                    style = Paint.Style.STROKE
+                    strokeWidth = 1.5f
+                    isAntiAlias = true
+                }
+                canvas.drawRect(9f, 9f, width - 9f, height - 9f, innerGuidePaint)
+            }
         }
 
         if (result !== bitmap) {

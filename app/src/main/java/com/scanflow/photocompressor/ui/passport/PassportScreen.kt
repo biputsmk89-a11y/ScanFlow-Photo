@@ -1,5 +1,6 @@
 package com.scanflow.photocompressor.ui.passport
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -44,11 +45,12 @@ fun PassportScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    var showAdvancedOptions by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Passport & ID Photo") },
+                title = { Text("Passport & ID Photo Studio") },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
@@ -79,27 +81,56 @@ fun PassportScreen(
             }
 
             if (uiState.selectedImageUri != null) {
-                // 2. FACE GUIDANCE & PREVIEW
+                // 2. FACE & POSITION GUIDANCE PREVIEW
                 item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "2. Face & Position Guidance",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            OutlinedButton(
+                                onClick = { viewModel.autoCenter() },
+                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Icon(Icons.Filled.FilterCenterFocus, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Center", style = MaterialTheme.typography.labelSmall)
+                            }
+                            OutlinedButton(
+                                onClick = { viewModel.resetPosition() },
+                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Icon(Icons.Filled.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Reset", style = MaterialTheme.typography.labelSmall)
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(6.dp))
                     Text(
-                        text = "2. Face Guidance Preview",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "Align face within oval: eyes on upper line, chin on lower line (70–80% photo height).",
+                        text = "Position face within guidelines: eyes on upper line, chin on lower line, shoulders balanced.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(modifier = Modifier.height(8.dp))
 
+                    // Preview Container with Simulated Background & Frame
+                    val previewBgColor = uiState.config.effectiveBackgroundColor?.let { Color(it) } ?: Color.Black
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(280.dp)
+                            .height(300.dp)
                             .clip(RoundedCornerShape(12.dp))
-                            .background(Color.Black),
+                            .background(previewBgColor),
                         contentAlignment = Alignment.Center
                     ) {
                         SafeImagePreview(
@@ -110,23 +141,43 @@ fun PassportScreen(
                             contentScale = ContentScale.Fit
                         )
 
-                        // Biometric Face Guidance Overlay (Oval, Eye line, Chin line)
+                        // Professional Geometric Face & Position Guide Overlay
                         Canvas(modifier = Modifier.fillMaxSize()) {
                             val w = size.width
                             val h = size.height
                             val centerX = w / 2f
                             val centerY = h / 2f
 
-                            val ovalW = w * 0.42f
-                            val ovalH = h * 0.62f
+                            val ovalW = w * 0.40f
+                            val ovalH = h * 0.58f
 
                             val dashStroke = Stroke(
-                                width = 3f,
-                                pathEffect = PathEffect.dashPathEffect(floatArrayOf(12f, 8f), 0f)
+                                width = 2.5f,
+                                pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 6f), 0f)
                             )
-                            val guideColor = Color.Yellow.copy(alpha = 0.85f)
+                            val guideColor = Color.Cyan.copy(alpha = 0.85f)
+                            val lineGuideColor = Color.White.copy(alpha = 0.7f)
 
-                            // Head oval
+                            // Top Margin Line
+                            val topMarginY = centerY - (ovalH / 2f) - (h * 0.08f)
+                            drawLine(
+                                color = lineGuideColor,
+                                start = Offset(w * 0.15f, topMarginY),
+                                end = Offset(w * 0.85f, topMarginY),
+                                strokeWidth = 1.5f,
+                                pathEffect = dashStroke.pathEffect
+                            )
+
+                            // Center Vertical Line
+                            drawLine(
+                                color = lineGuideColor.copy(alpha = 0.4f),
+                                start = Offset(centerX, topMarginY),
+                                end = Offset(centerX, h * 0.95f),
+                                strokeWidth = 1f,
+                                pathEffect = dashStroke.pathEffect
+                            )
+
+                            // Head / Face Oval Zone
                             drawOval(
                                 color = guideColor,
                                 topLeft = Offset(centerX - (ovalW / 2f), centerY - (ovalH / 2f) - (h * 0.04f)),
@@ -134,50 +185,98 @@ fun PassportScreen(
                                 style = dashStroke
                             )
 
-                            // Eye level line
+                            // Eye Level Line
                             val eyeY = centerY - (h * 0.10f)
                             drawLine(
                                 color = guideColor,
-                                start = Offset(centerX - (ovalW * 0.6f), eyeY),
-                                end = Offset(centerX + (ovalW * 0.6f), eyeY),
+                                start = Offset(centerX - (ovalW * 0.65f), eyeY),
+                                end = Offset(centerX + (ovalW * 0.65f), eyeY),
                                 strokeWidth = 2f
                             )
 
-                            // Chin level line
+                            // Chin Level Line
                             val chinY = centerY + (ovalH / 2f) - (h * 0.04f)
                             drawLine(
                                 color = guideColor,
-                                start = Offset(centerX - (ovalW * 0.4f), chinY),
-                                end = Offset(centerX + (ovalW * 0.4f), chinY),
+                                start = Offset(centerX - (ovalW * 0.45f), chinY),
+                                end = Offset(centerX + (ovalW * 0.45f), chinY),
                                 strokeWidth = 2f
                             )
+
+                            // Shoulder Zone Guide (Arch / Baseline)
+                            val shoulderY = chinY + (h * 0.14f)
+                            drawLine(
+                                color = lineGuideColor,
+                                start = Offset(w * 0.10f, shoulderY),
+                                end = Offset(w * 0.90f, shoulderY),
+                                strokeWidth = 2f,
+                                pathEffect = dashStroke.pathEffect
+                            )
+                        }
+
+                        // ID Frame Preview Overlay
+                        when (uiState.config.frameStyle) {
+                            IdFrameStyle.NONE -> {}
+                            IdFrameStyle.THIN -> {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .border(2.dp, Color.White, RoundedCornerShape(12.dp))
+                                )
+                            }
+                            IdFrameStyle.CLASSIC -> {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .border(6.dp, Color.White, RoundedCornerShape(12.dp))
+                                        .padding(6.dp)
+                                        .border(1.dp, Color.LightGray)
+                                )
+                            }
+                            IdFrameStyle.PROFESSIONAL -> {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .border(8.dp, Color.White, RoundedCornerShape(12.dp))
+                                        .padding(8.dp)
+                                        .border(1.5.dp, Color(0xFFD0D0D0))
+                                )
+                            }
                         }
                     }
                 }
 
-                // DISCLAIMER NOTICE
+                // 100% OFFLINE HONESTY & TRANSPARENCY NOTICE
                 item {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer),
-                        shape = RoundedCornerShape(10.dp)
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)),
+                        shape = RoundedCornerShape(12.dp)
                     ) {
                         Row(
                             modifier = Modifier.padding(12.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Icon(
-                                Icons.Filled.Info,
+                                Icons.Filled.Shield,
                                 contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onTertiaryContainer
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(24.dp)
                             )
-                            Spacer(modifier = Modifier.width(10.dp))
-                            Text(
-                                text = uiState.config.disclaimer,
-                                style = MaterialTheme.typography.bodySmall,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onTertiaryContainer
-                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column {
+                                Text(
+                                    text = "100% Offline & Private Studio",
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "Foto diproses lokal tanpa model AI atau cloud upload. Gunakan alat framing dan warna latar untuk menyiapkan foto identitas standar secara instan.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                         }
                     }
                 }
@@ -185,7 +284,7 @@ fun PassportScreen(
                 // 3. PRESET SPECIFICATION: 2 × 3, 3 × 4, 4 × 6, Custom
                 item {
                     Text(
-                        text = "3. Select Preset",
+                        text = "3. Photo Size",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
@@ -211,7 +310,7 @@ fun PassportScreen(
                     }
                 }
 
-                // 4. BACKGROUND COLOR
+                // 4. BACKGROUND COLOR SIMULATION (PREVIEW & COMPOSITION)
                 item {
                     Text(
                         text = "4. Background Color",
@@ -221,9 +320,9 @@ fun PassportScreen(
                     Spacer(modifier = Modifier.height(8.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        PassportBackground.values().forEach { bg ->
+                        PassportBackground.values().filter { it != PassportBackground.CUSTOM }.forEach { bg ->
                             FilterChip(
                                 selected = uiState.config.background == bg,
                                 onClick = { viewModel.updateBackground(bg) },
@@ -232,14 +331,14 @@ fun PassportScreen(
                                         if (bg.colorInt != null) {
                                             Box(
                                                 modifier = Modifier
-                                                    .size(12.dp)
+                                                    .size(14.dp)
                                                     .clip(CircleShape)
                                                     .background(Color(bg.colorInt))
                                                     .border(1.dp, Color.Gray, CircleShape)
                                             )
                                             Spacer(modifier = Modifier.width(6.dp))
                                         }
-                                        Text(bg.displayName, style = MaterialTheme.typography.labelSmall)
+                                        Text(bg.displayName, style = MaterialTheme.typography.labelMedium)
                                     }
                                 },
                                 modifier = Modifier.weight(1f)
@@ -248,10 +347,88 @@ fun PassportScreen(
                     }
                 }
 
-                // 5. PRINT LAYOUT: 1, 2, 4, 6, 8, 9, 12
+                // 5. PROFESSIONAL ID FRAME
                 item {
                     Text(
-                        text = "5. Print Layout (Copies per sheet)",
+                        text = "5. ID Frame Style",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        IdFrameStyle.values().forEach { frame ->
+                            FilterChip(
+                                selected = uiState.config.frameStyle == frame,
+                                onClick = { viewModel.updateFrameStyle(frame) },
+                                label = {
+                                    Text(
+                                        text = frame.displayName,
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = if (uiState.config.frameStyle == frame) FontWeight.Bold else FontWeight.Normal
+                                    )
+                                },
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
+                }
+
+                // 6. COLLAPSIBLE ADVANCED OPTIONS (Zoom, Rotation, Custom Color)
+                item {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { showAdvancedOptions = !showAdvancedOptions },
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                    ) {
+                        Column(modifier = Modifier.padding(14.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Filled.Tune, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text("Advanced Options", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodyMedium)
+                                }
+                                Icon(
+                                    if (showAdvancedOptions) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
+                                    contentDescription = null
+                                )
+                            }
+
+                            AnimatedVisibility(visible = showAdvancedOptions) {
+                                Column(modifier = Modifier.padding(top = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                    // Zoom
+                                    Text("Zoom: ${(uiState.config.zoom * 100).toInt()}%", style = MaterialTheme.typography.bodySmall)
+                                    Slider(
+                                        value = uiState.config.zoom,
+                                        onValueChange = { viewModel.updateZoom(it) },
+                                        valueRange = 0.8f..2.5f
+                                    )
+
+                                    // Rotation
+                                    Text("Rotation: ${uiState.config.rotationDegrees.toInt()}°", style = MaterialTheme.typography.bodySmall)
+                                    Slider(
+                                        value = uiState.config.rotationDegrees,
+                                        onValueChange = { viewModel.updateRotation(it) },
+                                        valueRange = -15f..15f
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 7. PRINT LAYOUT: 1, 2, 4, 6, 8, 9, 12
+                item {
+                    Text(
+                        text = "6. Print Layout (Copies per sheet)",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
@@ -265,7 +442,7 @@ fun PassportScreen(
                                 onClick = { viewModel.updatePrintLayout(layout) },
                                 label = {
                                     Text(
-                                        text = layout.displayName,
+                                        text = "${layout.displayName} ${if (layout.copies == 1) "Copy" else "Copies"}",
                                         fontWeight = if (uiState.config.printLayout == layout) FontWeight.Bold else FontWeight.Normal,
                                         style = MaterialTheme.typography.bodyMedium,
                                         modifier = Modifier.padding(horizontal = 4.dp)
@@ -287,9 +464,9 @@ fun PassportScreen(
                     }
                 }
 
-                // 6. PROCESS BUTTON
+                // 8. PROCESS BUTTON
                 item {
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(4.dp))
                     Button(
                         onClick = { viewModel.processPassport() },
                         enabled = !uiState.isProcessing,
@@ -305,16 +482,16 @@ fun PassportScreen(
                                 strokeWidth = 2.dp
                             )
                             Spacer(modifier = Modifier.width(10.dp))
-                            Text("Generating passport photo...")
+                            Text("Rendering ID photo sheet...")
                         } else {
                             Icon(Icons.Filled.Badge, contentDescription = null)
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Generate Passport Photo", fontWeight = FontWeight.Bold)
+                            Text("Generate ID Photo Sheet", fontWeight = FontWeight.Bold)
                         }
                     }
                 }
 
-                // 7. RESULT CARD
+                // 9. RESULT CARD
                 val activeResult = uiState.result
                 if (activeResult != null) {
                     item {
@@ -337,8 +514,8 @@ fun PassportScreen(
                                 )
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text(
-                                    text = "Passport Photo Ready!",
-                                    style = MaterialTheme.typography.titleSmall,
+                                    text = "ID Photo Ready!",
+                                    style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold
                                 )
                                 Text(
@@ -353,13 +530,13 @@ fun PassportScreen(
                                     contentDescription = "Passport Result",
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .height(200.dp)
+                                        .height(220.dp)
                                         .clip(RoundedCornerShape(8.dp)),
                                     tier = PreviewTier.CARD_PREVIEW,
                                     contentScale = ContentScale.Fit
                                 )
 
-                                Spacer(modifier = Modifier.height(12.dp))
+                                Spacer(modifier = Modifier.height(14.dp))
                                 Button(
                                     onClick = {
                                         ShareHelper.shareImage(
@@ -369,7 +546,8 @@ fun PassportScreen(
                                             "Share Passport Photo"
                                         )
                                     },
-                                    modifier = Modifier.fillMaxWidth()
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(10.dp)
                                 ) {
                                     Icon(Icons.Filled.Share, null)
                                     Spacer(modifier = Modifier.width(8.dp))
@@ -395,3 +573,4 @@ fun PassportScreen(
         }
     }
 }
+

@@ -75,6 +75,36 @@ class PassportEngineTest {
         assertEquals(PassportSpec.PRESET_3X4, config.spec)
         assertEquals(PassportBackground.ORIGINAL, config.background)
         assertEquals(PassportPrintLayout.COPIES_1, config.printLayout)
+        assertEquals(com.scanflow.photocompressor.domain.model.IdFrameStyle.PROFESSIONAL, config.frameStyle)
+        assertEquals(1.0f, config.zoom)
+        assertEquals(0f, config.panX)
+        assertEquals(0f, config.panY)
+        assertEquals(0f, config.rotationDegrees)
         assertTrue(config.addCutMarks)
+        assertTrue(config.complianceNotice.contains("alat foto identitas offline"))
+        assertNull(config.effectiveBackgroundColor)
+    }
+
+    @Test
+    fun `IdFrameStyle provides NONE, THIN, CLASSIC, and PROFESSIONAL styles`() {
+        val styles = com.scanflow.photocompressor.domain.model.IdFrameStyle.values()
+        assertEquals(4, styles.size)
+        assertEquals("No Frame", com.scanflow.photocompressor.domain.model.IdFrameStyle.NONE.displayName)
+        assertEquals("Thin Border", com.scanflow.photocompressor.domain.model.IdFrameStyle.THIN.displayName)
+        assertEquals("Classic Border", com.scanflow.photocompressor.domain.model.IdFrameStyle.CLASSIC.displayName)
+        assertEquals("Professional ID", com.scanflow.photocompressor.domain.model.IdFrameStyle.PROFESSIONAL.displayName)
+    }
+
+    @Test
+    fun `PassportBackground includes Blue, Red, White, Light Gray, and resolves effectiveBackgroundColor`() {
+        val blueConfig = PassportConfig(background = PassportBackground.BLUE)
+        assertNotNull(blueConfig.effectiveBackgroundColor)
+
+        val customColor = Color.rgb(50, 100, 150)
+        val customConfig = PassportConfig(
+            background = PassportBackground.CUSTOM,
+            customBackgroundColor = customColor
+        )
+        assertEquals(customColor, customConfig.effectiveBackgroundColor)
     }
 }

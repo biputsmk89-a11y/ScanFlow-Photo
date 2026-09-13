@@ -309,8 +309,8 @@ fun HomeScreen(
                             if (com.scanflow.photocompressor.domain.model.FeatureFlags.ENABLE_PASSPORT) {
                                 SecondaryToolRow(
                                     icon = Icons.Filled.Badge,
-                                    title = "Passport & ID Photo",
-                                    description = "Biometric face guide & print layouts",
+                                    title = "Passport & ID Photo Studio",
+                                    description = "Framing, background color & print layouts",
                                     onClick = onNavigateToPassport
                                 )
                             }

@@ -93,11 +93,20 @@ enum class PassportSpec(
     )
 }
 
+enum class IdFrameStyle(val displayName: String, val borderWidthDp: Float) {
+    NONE("No Frame", 0f),
+    THIN("Thin Border", 2f),
+    CLASSIC("Classic Border", 6f),
+    PROFESSIONAL("Professional ID", 8f)
+}
+
 enum class PassportBackground(val displayName: String, val colorInt: Int?) {
     ORIGINAL("Original", null),
-    WHITE("White", Color.WHITE),
     BLUE("Blue", Color.rgb(0, 85, 165)),
-    RED("Red", Color.rgb(231, 0, 0))
+    RED("Red", Color.rgb(211, 47, 47)),
+    WHITE("White", Color.WHITE),
+    GRAY("Light Gray", Color.rgb(224, 224, 224)),
+    CUSTOM("Custom", null)
 }
 
 enum class PassportPrintLayout(
@@ -118,10 +127,23 @@ enum class PassportPrintLayout(
 data class PassportConfig(
     val spec: PassportSpec = PassportSpec.PRESET_3X4,
     val background: PassportBackground = PassportBackground.ORIGINAL,
+    val customBackgroundColor: Int? = null,
+    val frameStyle: IdFrameStyle = IdFrameStyle.PROFESSIONAL,
+    val zoom: Float = 1.0f,
+    val panX: Float = 0f,
+    val panY: Float = 0f,
+    val rotationDegrees: Float = 0f,
     val printLayout: PassportPrintLayout = PassportPrintLayout.COPIES_1,
     val addCutMarks: Boolean = true,
-    val disclaimer: String = "Check the submission requirements before printing."
-)
+    val disclaimer: String = "Check the submission requirements before printing.",
+    val complianceNotice: String = "Passport & ID Photo Studio adalah alat foto identitas offline yang membantu pengguna melakukan crop, resize, positioning, penyesuaian warna latar, framing, dan print layout secara lokal di perangkat. Fitur ini tidak menggunakan AI background removal atau cloud processing."
+) {
+    /**
+     * Resolves the effective background color (null for original).
+     */
+    val effectiveBackgroundColor: Int?
+        get() = if (background == PassportBackground.CUSTOM) customBackgroundColor else background.colorInt
+}
 
 // =========================================================================
 // 3. SOCIAL MEDIA MODELS

@@ -47,6 +47,52 @@ class PassportViewModel @Inject constructor(
         _uiState.update { it.copy(config = it.config.copy(printLayout = layout), result = null) }
     }
 
+    fun updateFrameStyle(style: IdFrameStyle) {
+        _uiState.update { it.copy(config = it.config.copy(frameStyle = style), result = null) }
+    }
+
+    fun updateZoom(zoom: Float) {
+        _uiState.update { it.copy(config = it.config.copy(zoom = zoom.coerceIn(0.5f, 3.0f)), result = null) }
+    }
+
+    fun updatePan(panX: Float, panY: Float) {
+        _uiState.update { it.copy(config = it.config.copy(panX = panX, panY = panY), result = null) }
+    }
+
+    fun updateRotation(degrees: Float) {
+        _uiState.update { it.copy(config = it.config.copy(rotationDegrees = degrees), result = null) }
+    }
+
+    fun autoCenter() {
+        _uiState.update {
+            it.copy(
+                config = it.config.copy(panX = 0f, panY = 0f),
+                result = null
+            )
+        }
+    }
+
+    fun resetPosition() {
+        _uiState.update {
+            it.copy(
+                config = it.config.copy(panX = 0f, panY = 0f, zoom = 1.0f, rotationDegrees = 0f),
+                result = null
+            )
+        }
+    }
+
+    fun updateCustomBackgroundColor(colorInt: Int) {
+        _uiState.update {
+            it.copy(
+                config = it.config.copy(
+                    background = PassportBackground.CUSTOM,
+                    customBackgroundColor = colorInt
+                ),
+                result = null
+            )
+        }
+    }
+
     fun updateAddCutMarks(add: Boolean) {
         _uiState.update { it.copy(config = it.config.copy(addCutMarks = add), result = null) }
     }

@@ -29,7 +29,7 @@ sealed class Screen(
 
     // Advanced tool destinations
     object Pdf : Screen("pdf", "PDF Document", Icons.Filled.PictureAsPdf)
-    object Passport : Screen("passport", "Passport Photo", Icons.Filled.Badge)
+    object Passport : Screen("passport", "Passport & ID Photo Studio", Icons.Filled.Badge)
     object Social : Screen("social", "Social Media", Icons.Filled.Share)
     object WhatsApp : Screen("whatsapp", "WhatsApp Ready", Icons.Filled.Send)
 
