@@ -40,10 +40,10 @@ jobs:
       - name: Configure Keystore from Secrets
         id: setup_keystore
         env:
-          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          KEYSTORE_BASE64: ${{ secrets['ANDROID_KEYSTORE_BASE64'] }}
+          KEYSTORE_PASSWORD: ${{ secrets['ANDROID_KEYSTORE_PASSWORD'] }}
+          KEY_ALIAS: ${{ secrets['ANDROID_KEY_ALIAS'] }}
+          KEY_PASSWORD: ${{ secrets['ANDROID_KEY_PASSWORD'] }}
         run: |
           KEYSTORE_DIR="$RUNNER_TEMP/keystore"
           mkdir -p "$KEYSTORE_DIR"
