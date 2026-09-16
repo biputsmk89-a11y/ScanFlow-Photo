@@ -108,13 +108,6 @@ jobs:
           echo "Artifacts prepared successfully:"
           ls -la release_artifacts/
 
-      - name: Upload Release Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: android-release-package
-          path: release_artifacts/*
-          retention-days: 30
-
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
@@ -141,6 +134,14 @@ jobs:
           files: release_artifacts/*
           draft: false
           prerelease: false
+
+      - name: Upload Release Artifacts (CI Backup)
+        uses: actions/upload-artifact@v4
+        continue-on-error: true
+        with:
+          name: android-release-package
+          path: release_artifacts/*
+          retention-days: 3
 
       - name: Cleanup Keystore Material
         if: always()

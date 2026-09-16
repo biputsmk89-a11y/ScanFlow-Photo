@@ -46,24 +46,27 @@ jobs:
         run: ./gradlew assembleDebug --stacktrace
 
       - name: Upload Test Reports
-        if: always()
+        if: failure()
         uses: actions/upload-artifact@v4
+        continue-on-error: true
         with:
           name: test-reports-debug
           path: app/build/reports/tests/testDebugUnitTest/
-          retention-days: 7
+          retention-days: 3
 
       - name: Upload Lint Report
-        if: always()
+        if: failure()
         uses: actions/upload-artifact@v4
+        continue-on-error: true
         with:
           name: lint-report-debug
           path: app/build/reports/lint-results-debug.html
-          retention-days: 7
+          retention-days: 3
 
       - name: Upload Debug APK
         uses: actions/upload-artifact@v4
+        continue-on-error: true
         with:
           name: android-debug-apk
           path: app/build/outputs/apk/debug/*.apk
-          retention-days: 14
+          retention-days: 3

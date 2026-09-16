@@ -1,0 +1,39 @@
+name: Cleanup Artifacts
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * 0' # Every Sunday at midnight UTC
+
+permissions:
+  actions: write
+
+jobs:
+  cleanup:
+    name: Delete Old Artifacts
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete Action Artifacts
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const artifacts = await github.paginate(github.rest.actions.listArtifactsForRepo, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+            });
+            console.log(`Found ${artifacts.length} total artifacts in repository.`);
+            let deletedCount = 0;
+            for (const artifact of artifacts) {
+              try {
+                console.log(`Deleting artifact: ${artifact.name} (ID: ${artifact.id})`);
+                await github.rest.actions.deleteArtifact({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  artifact_id: artifact.id,
+                });
+                deletedCount++;
+              } catch (err) {
+                console.warn(`Could not delete artifact ${artifact.id}: ${err.message}`);
+              }
+            }
+            console.log(`Cleanup finished. Total deleted: ${deletedCount}`);
