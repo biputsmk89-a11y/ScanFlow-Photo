@@ -72,5 +72,9 @@ enum class OperationType(val displayName: String) {
     FLIP("Flip"),
     WATERMARK("Watermark"),
     CONVERT("Convert"),
-    BATCH("Batch")
+    BATCH("Batch"),
+    PDF("PDF"),
+    PASSPORT("Passport"),
+    SOCIAL("Social"),
+    WHATSAPP("WhatsApp")
 }

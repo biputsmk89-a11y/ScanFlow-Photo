@@ -137,27 +137,7 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun upgradeToPro(activity: android.app.Activity, productId: String = BillingConstants.SKU_PRO_LIFETIME) {
-        viewModelScope.launch {
-            val result = billingManager.launchBillingFlow(activity, productId)
-            if (result.isSuccess) {
-                _uiState.update { it.copy(message = "ScanFlow Pro activated successfully!") }
-            } else {
-                _uiState.update { it.copy(message = result.exceptionOrNull()?.message ?: "Purchase could not be completed") }
-            }
-        }
-    }
 
-    fun restorePurchases() {
-        viewModelScope.launch {
-            val result = billingManager.restorePurchases()
-            if (result.isSuccess && result.getOrNull()?.isActivePro == true) {
-                _uiState.update { it.copy(message = "Purchases restored: ScanFlow Pro is active.") }
-            } else {
-                _uiState.update { it.copy(message = "No active subscription found to restore.") }
-            }
-        }
-    }
 
     fun clearMessage() {
         _uiState.update { it.copy(message = null) }

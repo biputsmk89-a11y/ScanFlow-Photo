@@ -15,18 +15,24 @@ import kotlinx.coroutines.launch
 import java.io.File
 import javax.inject.Inject
 
+import com.scanflow.photocompressor.domain.repository.HistoryRepository
+
 data class PdfUiState(
     val selectedImages: List<ImageInfo> = emptyList(),
     val config: PdfConfig = PdfConfig(),
     val isGenerating: Boolean = false,
     val generatedFile: File? = null,
+    val savedPdfUri: Uri? = null,
+    val isSavedToDocuments: Boolean = false,
     val errorMessage: String? = null
 )
 
 @HiltViewModel
 class PdfViewModel @Inject constructor(
     private val pdfEngine: PdfEngine,
-    private val imageRepository: ImageRepository
+    private val imageRepository: ImageRepository,
+    private val historyRepository: HistoryRepository,
+    private val fileManager: com.scanflow.photocompressor.data.storage.FileManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(PdfUiState())
@@ -100,7 +106,41 @@ class PdfViewModel @Inject constructor(
             val uris = state.selectedImages.map { it.uri }
             val result = pdfEngine.generatePdf(uris, state.config)
             if (result.isSuccess) {
-                _uiState.update { it.copy(isGenerating = false, generatedFile = result.getOrNull()) }
+                val file = result.getOrNull()
+                var savedUri: Uri? = null
+                if (file != null) {
+                    try {
+                        savedUri = fileManager.savePdfToDocuments(file, state.config.title.ifBlank { "document" })
+                    } catch (e: Exception) {
+                        // fallback to temporary file provider
+                    }
+
+                    runCatching {
+                        val totalOriginalBytes = state.selectedImages.sumOf { it.fileSize }
+                        val pdfBytes = file.length()
+                        historyRepository.addEntry(
+                            ProcessingHistory(
+                                operationType = OperationType.PDF,
+                                itemCount = state.selectedImages.size,
+                                originalBytes = totalOriginalBytes,
+                                outputBytes = pdfBytes,
+                                inputFileName = "${state.selectedImages.size} photos",
+                                outputUri = (savedUri ?: Uri.fromFile(file)).toString(),
+                                outputFileName = file.name,
+                                width = 0,
+                                height = 0
+                            )
+                        )
+                    }
+                }
+                _uiState.update {
+                    it.copy(
+                        isGenerating = false,
+                        generatedFile = file,
+                        savedPdfUri = savedUri,
+                        isSavedToDocuments = savedUri != null
+                    )
+                }
             } else {
                 _uiState.update {
                     it.copy(

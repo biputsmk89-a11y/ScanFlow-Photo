@@ -15,13 +15,26 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.ui.platform.LocalContext
+import com.scanflow.photocompressor.util.ShareHelper
 import com.scanflow.photocompressor.domain.model.WatermarkPosition
 import com.scanflow.photocompressor.ui.components.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun WatermarkScreen(onNavigateBack: () -> Unit, viewModel: WatermarkViewModel = hiltViewModel()) {
+fun WatermarkScreen(
+    onNavigateBack: () -> Unit,
+    initialUri: android.net.Uri? = null,
+    viewModel: WatermarkViewModel = hiltViewModel()
+) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+
+    LaunchedEffect(initialUri) {
+        if (initialUri != null && uiState.selectedImageUri != initialUri) {
+            viewModel.selectImage(initialUri)
+        }
+    }
     Scaffold(
         topBar = { TopAppBar(title = { Text("Watermark") }, navigationIcon = { IconButton(onClick = onNavigateBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") } }) }
     ) { padding ->
@@ -70,7 +83,18 @@ fun WatermarkScreen(onNavigateBack: () -> Unit, viewModel: WatermarkViewModel = 
                 uiState.error?.let { item { Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)) { Text(it, Modifier.padding(12.dp), color = MaterialTheme.colorScheme.onErrorContainer) } } }
                 uiState.result?.let { result ->
                     item { BeforeAfterPreview(originalUri = uiState.selectedImageUri, resultUri = result.outputUri, originalSize = "Original", resultSize = "Watermarked", savedPercentage = "Watermark applied") }
-                    item { OutlinedButton(onClick = { viewModel.reset() }, Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp)) { Text("Add to Another") } }
+                    item {
+                        Button(
+                            onClick = { ShareHelper.shareImage(context, result.outputUri, "image/*", "Share Watermarked Image") },
+                            modifier = Modifier.fillMaxWidth().height(50.dp),
+                            shape = RoundedCornerShape(14.dp)
+                        ) {
+                            Icon(Icons.Filled.Share, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Share Watermarked Image", fontWeight = FontWeight.SemiBold)
+                        }
+                    }
+                    item { OutlinedButton(onClick = { viewModel.reset() }, Modifier.fillMaxWidth().height(48.dp), shape = RoundedCornerShape(14.dp)) { Icon(Icons.Filled.AddPhotoAlternate, null, Modifier.size(18.dp)); Spacer(Modifier.width(8.dp)); Text("Add to Another") } }
                 }
                 item { Spacer(Modifier.height(16.dp)) }
             }

@@ -22,11 +22,9 @@ import com.scanflow.photocompressor.domain.model.ConflictStrategy
 import com.scanflow.photocompressor.domain.model.ImageFormat
 import com.scanflow.photocompressor.domain.model.ThemeMode
 
-import android.app.Activity
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.ui.platform.LocalContext
-import com.scanflow.photocompressor.ui.components.ProPaywallSheet
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -36,29 +34,11 @@ fun SettingsScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
-    var showPaywall by remember { mutableStateOf(false) }
-
     LaunchedEffect(uiState.message) {
         uiState.message?.let { msg ->
             snackbarHostState.showSnackbar(msg)
             viewModel.clearMessage()
         }
-    }
-
-    if (showPaywall) {
-        ProPaywallSheet(
-            onDismiss = { showPaywall = false },
-            onUpgradeClicked = {
-                showPaywall = false
-                (context as? Activity)?.let { act ->
-                    viewModel.upgradeToPro(act)
-                }
-            },
-            onRestoreClicked = {
-                showPaywall = false
-                viewModel.restorePurchases()
-            }
-        )
     }
 
     Scaffold(
@@ -75,82 +55,49 @@ fun SettingsScreen(
                 Text("Settings", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
             }
 
-            // Pro Membership Card
+            // Unified About & Free Utility Banner
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = if (uiState.isPro) 
-                            MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.6f) 
-                        else 
-                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
-                    )
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.2f))
                 ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                            Icon(
-                                Icons.Filled.Star,
-                                contentDescription = null,
-                                tint = if (uiState.isPro) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(32.dp)
-                            )
-                            Spacer(Modifier.width(12.dp))
-                            Column {
-                                Text(
-                                    text = if (uiState.isPro) "ScanFlow Pro Active" else "ScanFlow Free Tier",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Text(
-                                    text = if (uiState.isPro) "Unlimited batching & all features unlocked" else "Upgrade for unlimited batching & zero ads",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-                        if (!uiState.isPro) {
-                            Button(
-                                onClick = { showPaywall = true },
-                                shape = RoundedCornerShape(10.dp)
-                            ) {
-                                Text("Upgrade")
-                            }
-                        }
-                    }
-                }
-            }
-
-            // About banner
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f))
-                ) {
-                    Box(
+                    Column(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(20.dp)
                     ) {
-                        Column {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Filled.PhotoCamera, null, Modifier.size(32.dp), tint = MaterialTheme.colorScheme.primary)
-                                Spacer(Modifier.width(12.dp))
-                                Column {
-                                    Text("ScanFlow Photo", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                                    Text("All-in-One Image Utility Toolkit", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                                modifier = Modifier.size(44.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        Icons.Filled.PhotoCamera,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(26.dp),
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
                                 }
                             }
-                            Spacer(Modifier.height(8.dp))
-                            Text("Fast, private, and offline-first image compression, resizing, and conversion.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Spacer(Modifier.width(14.dp))
+                            Column {
+                                Text("ScanFlow Photo", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                                Text("All-in-One Image Utility Toolkit", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
                         }
+                        Spacer(Modifier.height(12.dp))
+                        Text(
+                            "Fast, private, and 100% offline-first. All tools & compression features are completely free with zero tracking or telemetry.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
             }

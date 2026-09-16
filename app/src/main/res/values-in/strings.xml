@@ -81,6 +81,8 @@
     <string name="passport_background_title">Warna Latar Belakang</string>
     <string name="passport_print_layout_title">Tata Letak Cetak (Salinan per lembar)</string>
     <string name="passport_cut_marks">Tambahkan garis panduan potong (garis putus-putus)</string>
+    <string name="passport_offline_title">100% Studio Privat &amp; Offline</string>
+    <string name="passport_offline_desc">Foto diproses secara lokal tanpa unggahan cloud. Gunakan alat pembingkaian dan warna latar untuk menyiapkan pasfoto standar secara instan.</string>
     <string name="action_generate_passport_semantic">Buat lembar cetak pasfoto</string>
 
     <!-- Image to PDF (Rule 70) -->

@@ -25,9 +25,4 @@ object FeatureFlags {
      * Controls WhatsApp status and chat image optimization.
      */
     const val ENABLE_WHATSAPP: Boolean = true
-
-    /**
-     * Controls experimental on-device AI enhancements (kept disabled until stable).
-     */
-    const val ENABLE_AI: Boolean = false
 }

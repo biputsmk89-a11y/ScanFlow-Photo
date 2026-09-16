@@ -72,7 +72,7 @@ class WhatsAppEngine @Inject constructor(
             inputUri = sourceUri,
             pipeline = pipeline,
             targetSizeBytes = targetBytes,
-            operationType = OperationType.COMPRESS
+            operationType = OperationType.WHATSAPP
         )
     }
 }

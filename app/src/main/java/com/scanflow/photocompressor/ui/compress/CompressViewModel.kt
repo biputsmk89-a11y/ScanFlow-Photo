@@ -146,6 +146,7 @@ class CompressViewModel @Inject constructor(
         }
     }
 
+    @Deprecated("Image is automatically saved to Pictures/PhotoCompressor upon completion.")
     fun saveResult() {
         com.scanflow.photocompressor.util.AnalyticsLogger.logEvent(
             com.scanflow.photocompressor.util.AnalyticsEvent.EXPORT_CLICKED

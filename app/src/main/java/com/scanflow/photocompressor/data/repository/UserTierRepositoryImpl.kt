@@ -30,7 +30,7 @@ class UserTierRepositoryImpl @Inject constructor(
             if (exception is IOException) emit(emptyPreferences()) else throw exception
         }
         .map { preferences ->
-            val isPro = preferences[Keys.IS_PRO_USER] ?: false
+            val isPro = preferences[Keys.IS_PRO_USER] ?: true
             if (isPro) UserTier.PRO else UserTier.FREE
         }
 
@@ -41,10 +41,7 @@ class UserTierRepositoryImpl @Inject constructor(
     }
 
     override fun isFeatureAvailable(feature: ProFeature, currentTier: UserTier): Boolean {
-        return when (currentTier) {
-            UserTier.PRO -> true
-            UserTier.FREE -> false
-        }
+        return true
     }
 
     override suspend fun isPro(): Boolean {

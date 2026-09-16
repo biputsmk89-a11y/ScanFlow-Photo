@@ -37,11 +37,15 @@ class BatchViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
+            try {
+                managePresetsUseCase.seedDefaults()
+            } catch (_: Exception) { }
             managePresetsUseCase.getAllPresets().collect { presets ->
+                val fallbackList = if (presets.isNotEmpty()) presets else CompressionPreset.defaults
                 _uiState.update {
                     it.copy(
-                        presets = presets,
-                        selectedPreset = it.selectedPreset ?: presets.firstOrNull()
+                        presets = fallbackList,
+                        selectedPreset = it.selectedPreset ?: fallbackList.firstOrNull()
                     )
                 }
             }
@@ -71,8 +75,11 @@ class BatchViewModel @Inject constructor(
 
     fun startBatch() {
         val state = _uiState.value
-        val preset = state.selectedPreset ?: return
-        if (state.selectedImages.isEmpty()) return
+        val preset = state.selectedPreset ?: state.presets.firstOrNull() ?: CompressionPreset.defaults.first()
+        if (state.selectedImages.isEmpty()) {
+            _uiState.update { it.copy(error = "Please select at least one photo to compress") }
+            return
+        }
 
         val ops = mutableListOf<ImageOperation>()
         val maxDim = preset.maxDimension ?: maxOf(preset.maxWidth, preset.maxHeight)

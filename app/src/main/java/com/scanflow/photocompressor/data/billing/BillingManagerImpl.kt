@@ -33,31 +33,9 @@ class BillingManagerImpl @Inject constructor(
     }
 
     override suspend fun launchBillingFlow(activity: Activity, productId: String): Result<Unit> {
-        _purchaseState.value = PurchaseState.Pending
-
-        // In production, launches Google Play Billing Flow.
-        // Upon purchase token receipt, delegates to ServerVerificationProvider if configured.
-        return try {
-            // Simulate / handle local development or forward to server verification
-            val provider = serverVerificationProvider
-            val entitlement = if (provider != null) {
-                provider.verifyPurchase("mock_order_123", "mock_token_abc", productId).getOrThrow()
-            } else {
-                UserEntitlement(isPro = true, productId = productId, expiryTime = null)
-            }
-
-            entitlementRepository.setEntitlement(entitlement)
-            _purchaseState.value = PurchaseState.Success(
-                orderId = "order_${System.currentTimeMillis()}",
-                productId = productId,
-                purchaseToken = "token_${System.currentTimeMillis()}",
-                isAcknowledged = true
-            )
-            Result.success(Unit)
-        } catch (e: Exception) {
-            _purchaseState.value = PurchaseState.Error(code = -1, message = e.message ?: "Purchase failed")
-            Result.failure(e)
-        }
+        // Free-First Release: Google Play In-App Billing is not configured in this build.
+        // No fake order tokens or mock purchase states are generated.
+        return Result.failure(UnsupportedOperationException("In-app billing is not active in this release build."))
     }
 
     override suspend fun restorePurchases(): Result<UserEntitlement> {

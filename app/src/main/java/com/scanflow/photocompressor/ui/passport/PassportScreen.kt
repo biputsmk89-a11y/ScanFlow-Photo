@@ -5,12 +5,16 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
@@ -26,10 +30,12 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.scanflow.photocompressor.R
 import com.scanflow.photocompressor.domain.model.*
 import com.scanflow.photocompressor.ui.components.ImagePickerCard
 import com.scanflow.photocompressor.ui.components.SafeImagePreview
@@ -41,11 +47,18 @@ import com.scanflow.photocompressor.util.ShareHelper
 @Composable
 fun PassportScreen(
     onNavigateBack: () -> Unit,
+    initialUri: android.net.Uri? = null,
     viewModel: PassportViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     var showAdvancedOptions by remember { mutableStateOf(false) }
+
+    LaunchedEffect(initialUri) {
+        if (initialUri != null && uiState.selectedImageUri != initialUri) {
+            viewModel.selectImage(initialUri)
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -130,13 +143,27 @@ fun PassportScreen(
                             .fillMaxWidth()
                             .height(300.dp)
                             .clip(RoundedCornerShape(12.dp))
-                            .background(previewBgColor),
+                            .background(previewBgColor)
+                            .clipToBounds()
+                            .pointerInput(Unit) {
+                                detectTransformGestures { _, pan, zoom, _ ->
+                                    viewModel.updateTransform(zoom, pan.x, pan.y)
+                                }
+                            },
                         contentAlignment = Alignment.Center
                     ) {
                         SafeImagePreview(
                             data = uiState.selectedImageUri,
                             contentDescription = "Passport Source",
-                            modifier = Modifier.fillMaxSize(),
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .graphicsLayer {
+                                    scaleX = uiState.config.zoom
+                                    scaleY = uiState.config.zoom
+                                    translationX = uiState.config.panX
+                                    translationY = uiState.config.panY
+                                    rotationZ = uiState.config.rotationDegrees
+                                },
                             tier = PreviewTier.FULL_PREVIEW,
                             contentScale = ContentScale.Fit
                         )
@@ -266,13 +293,13 @@ fun PassportScreen(
                             Spacer(modifier = Modifier.width(12.dp))
                             Column {
                                 Text(
-                                    text = "100% Offline & Private Studio",
+                                    text = stringResource(R.string.passport_offline_title),
                                     style = MaterialTheme.typography.labelLarge,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
                                 Text(
-                                    text = "Foto diproses lokal tanpa model AI atau cloud upload. Gunakan alat framing dan warna latar untuk menyiapkan foto identitas standar secara instan.",
+                                    text = stringResource(R.string.passport_offline_desc),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )

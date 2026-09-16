@@ -1,6 +1,7 @@
 package com.scanflow.photocompressor.ui.crop
 
 import android.content.Intent
+import com.scanflow.photocompressor.util.ShareHelper
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTransformGestures
@@ -27,6 +28,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -41,10 +43,17 @@ import com.scanflow.photocompressor.ui.components.*
 @Composable
 fun CropScreen(
     onNavigateBack: () -> Unit,
+    initialUri: android.net.Uri? = null,
     viewModel: CropViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+
+    LaunchedEffect(initialUri) {
+        if (initialUri != null && uiState.selectedImageUri != initialUri) {
+            viewModel.selectImage(initialUri)
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -123,6 +132,9 @@ fun CropScreen(
                                         .clip(RoundedCornerShape(12.dp))
                                         .background(Color.Black)
                                         .clipToBounds()
+                                        .onSizeChanged { size ->
+                                            viewModel.setViewportSize(size.width, size.height)
+                                        }
                                         .pointerInput(Unit) {
                                             detectTransformGestures { _, pan, zoom, _ ->
                                                 viewModel.updateTransform(zoom, pan.x, pan.y)
@@ -360,12 +372,7 @@ fun CropScreen(
                             // Primary Action: Share
                             Button(
                                 onClick = {
-                                    val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                                        type = "image/*"
-                                        putExtra(Intent.EXTRA_STREAM, result.outputUri)
-                                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                    }
-                                    context.startActivity(Intent.createChooser(shareIntent, "Share Cropped Image"))
+                                    ShareHelper.shareImage(context, result.outputUri, "image/*", "Share Cropped Image")
                                 },
                                 modifier = Modifier.fillMaxWidth().height(50.dp),
                                 shape = RoundedCornerShape(14.dp)

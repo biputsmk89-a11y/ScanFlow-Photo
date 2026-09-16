@@ -43,5 +43,9 @@ private fun getOperationColors(type: OperationType): Pair<Color, Color> {
         OperationType.WATERMARK -> Pair(Color(0xFFE0F2F1), Color(0xFF00695C))
         OperationType.CONVERT -> Pair(Color(0xFFF1F8E9), Color(0xFF558B2F))
         OperationType.BATCH -> Pair(Color(0xFFEDE7F6), Color(0xFF4527A0))
+        OperationType.PDF -> Pair(Color(0xFFFFEBEE), Color(0xFFC62828))
+        OperationType.PASSPORT -> Pair(Color(0xFFE8EAF6), Color(0xFF283593))
+        OperationType.SOCIAL -> Pair(Color(0xFFFCE4EC), Color(0xFFAD1457))
+        OperationType.WHATSAPP -> Pair(Color(0xFFE8F5E9), Color(0xFF2E7D32))
     }
 }

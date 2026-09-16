@@ -20,6 +20,7 @@ import androidx.compose.runtime.getValue
 import com.scanflow.photocompressor.domain.model.AppPreferences
 import com.scanflow.photocompressor.domain.model.ThemeMode
 import com.scanflow.photocompressor.domain.repository.PreferencesRepository
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
@@ -36,6 +37,7 @@ class MainActivity : ComponentActivity() {
     private val incomingSharedUris = mutableStateOf<List<Uri>?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        installSplashScreen()
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 

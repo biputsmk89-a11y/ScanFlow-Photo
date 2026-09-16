@@ -344,18 +344,53 @@ fun BeforeAfterPreview(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Savings summary banner
+            val cleanPercentStr = savedPercentage.replace("%", "").trim()
+            val percentVal = cleanPercentStr.toDoubleOrNull()
+
+            val (bannerText, bannerColor, bannerBg) = when {
+                percentVal == null -> {
+                    Triple(
+                        savedPercentage,
+                        MaterialTheme.colorScheme.primary,
+                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
+                    )
+                }
+                percentVal > 0.05 -> {
+                    Triple(
+                        "💾 Saved ${String.format(java.util.Locale.US, "%.1f", percentVal)}%",
+                        Success,
+                        SuccessContainer
+                    )
+                }
+                percentVal < -0.05 -> {
+                    val increaseVal = kotlin.math.abs(percentVal)
+                    Triple(
+                        "📈 Size increased by ${String.format(java.util.Locale.US, "%.1f", increaseVal)}%",
+                        MaterialTheme.colorScheme.onSurfaceVariant,
+                        MaterialTheme.colorScheme.surfaceVariant
+                    )
+                }
+                else -> {
+                    Triple(
+                        "⚖️ Size unchanged",
+                        MaterialTheme.colorScheme.onSurfaceVariant,
+                        MaterialTheme.colorScheme.surfaceVariant
+                    )
+                }
+            }
+
+            // Summary banner
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(8.dp),
-                color = SuccessContainer
+                color = bannerBg
             ) {
                 Text(
-                    text = "💾 Saved $savedPercentage",
+                    text = bannerText,
                     modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.SemiBold,
-                    color = Success
+                    color = bannerColor
                 )
             }
         }

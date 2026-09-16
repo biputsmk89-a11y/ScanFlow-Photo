@@ -27,7 +27,7 @@ class EntitlementRepositoryImpl @Inject constructor(
         val EXPIRY_TIME = longPreferencesKey("pro_expiry_time")
     }
 
-    private val _entitlement = MutableStateFlow(UserEntitlement.FREE)
+    private val _entitlement = MutableStateFlow(UserEntitlement.LIFETIME_PRO)
     override val entitlement: StateFlow<UserEntitlement> = _entitlement.asStateFlow()
 
     init {
@@ -37,8 +37,8 @@ class EntitlementRepositoryImpl @Inject constructor(
                     if (exception is IOException) emit(emptyPreferences()) else throw exception
                 }
                 .collect { preferences ->
-                    val isPro = preferences[Keys.IS_PRO] ?: false
-                    val productId = preferences[Keys.PRODUCT_ID]
+                    val isPro = preferences[Keys.IS_PRO] ?: true
+                    val productId = preferences[Keys.PRODUCT_ID] ?: "scanflow_pro_lifetime"
                     val expiryTime = preferences[Keys.EXPIRY_TIME]
                     _entitlement.value = UserEntitlement(
                         isPro = isPro,
@@ -51,8 +51,8 @@ class EntitlementRepositoryImpl @Inject constructor(
 
     override suspend fun refreshEntitlement(): UserEntitlement {
         val prefs = dataStore.data.first()
-        val isPro = prefs[Keys.IS_PRO] ?: false
-        val productId = prefs[Keys.PRODUCT_ID]
+        val isPro = prefs[Keys.IS_PRO] ?: true
+        val productId = prefs[Keys.PRODUCT_ID] ?: "scanflow_pro_lifetime"
         val expiryTime = prefs[Keys.EXPIRY_TIME]
         val updated = UserEntitlement(isPro = isPro, productId = productId, expiryTime = expiryTime)
         _entitlement.value = updated

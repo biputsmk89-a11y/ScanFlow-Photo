@@ -26,15 +26,15 @@ class HistoryViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             getHistoryUseCase.getAllHistory().collect { list ->
-                _uiState.update { it.copy(historyList = list, isLoading = false) }
-            }
-        }
-        viewModelScope.launch {
-            _uiState.update {
-                it.copy(
-                    totalSavedBytes = getHistoryUseCase.getTotalSavedBytes(),
-                    totalOperations = getHistoryUseCase.getTotalOperations()
-                )
+                val totalSaved = list.sumOf { it.savedBytes }
+                _uiState.update {
+                    it.copy(
+                        historyList = list,
+                        totalSavedBytes = totalSaved,
+                        totalOperations = list.size,
+                        isLoading = false
+                    )
+                }
             }
         }
     }

@@ -24,9 +24,14 @@ import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HistoryScreen(viewModel: HistoryViewModel = hiltViewModel()) {
+fun HistoryScreen(
+    onNavigateToEdit: ((android.net.Uri) -> Unit)? = null,
+    viewModel: HistoryViewModel = hiltViewModel()
+) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = androidx.compose.ui.platform.LocalContext.current
     var showClearDialog by remember { mutableStateOf(false) }
+    var selectedEntry by remember { mutableStateOf<com.scanflow.photocompressor.domain.model.ProcessingHistory?>(null) }
 
     if (showClearDialog) {
         AlertDialog(
@@ -36,6 +41,174 @@ fun HistoryScreen(viewModel: HistoryViewModel = hiltViewModel()) {
             confirmButton = { TextButton(onClick = { viewModel.clearAll(); showClearDialog = false }) { Text("Clear") } },
             dismissButton = { TextButton(onClick = { showClearDialog = false }) { Text("Cancel") } }
         )
+    }
+
+    selectedEntry?.let { entry ->
+        ModalBottomSheet(
+            onDismissRequest = { selectedEntry = null }
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                val isPdf = entry.operation == com.scanflow.photocompressor.domain.model.OperationType.PDF || entry.outputFileName.endsWith(".pdf", ignoreCase = true)
+                val mimeType = if (isPdf) "application/pdf" else "image/*"
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    val previewUri = entry.outputUri ?: entry.inputUri
+                    if (isPdf) {
+                        Surface(
+                            modifier = Modifier.size(64.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            color = MaterialTheme.colorScheme.errorContainer
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    Icons.Filled.PictureAsPdf,
+                                    contentDescription = "PDF Document",
+                                    tint = MaterialTheme.colorScheme.onErrorContainer,
+                                    modifier = Modifier.size(32.dp)
+                                )
+                            }
+                        }
+                    } else if (!previewUri.isNullOrEmpty()) {
+                        com.scanflow.photocompressor.ui.components.SafeThumbnail(
+                            data = previewUri,
+                            contentDescription = entry.inputFileName,
+                            modifier = Modifier
+                                .size(64.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                        )
+                    }
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            text = entry.outputFileName.ifEmpty { entry.inputFileName },
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        OperationChip(operationType = entry.operation)
+                    }
+                }
+
+                HorizontalDivider()
+
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("Original Size", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(formatBytes(entry.originalSize), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                    }
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("Result Size", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(formatBytes(entry.resultSize), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                    }
+                    if (entry.savedPercentage > 0) {
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text("Reduction", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text("${String.format("%.1f", entry.savedPercentage)}% (${formatBytes(entry.savedBytes)})", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, color = Success)
+                        }
+                    }
+                    if (entry.width > 0 && entry.height > 0) {
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text("Dimensions", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text("${entry.width} × ${entry.height} px", style = MaterialTheme.typography.bodyMedium)
+                        }
+                    }
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("Date", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(formatTimestamp(entry.timestamp), style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+
+                Spacer(Modifier.height(8.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Button(
+                        onClick = {
+                            val uriStr = entry.outputUri ?: entry.inputUri
+                            if (!uriStr.isNullOrEmpty()) {
+                                try {
+                                    val intent = android.content.Intent(android.content.Intent.ACTION_VIEW).apply {
+                                        setDataAndType(android.net.Uri.parse(uriStr), mimeType)
+                                        addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                    }
+                                    context.startActivity(intent)
+                                } catch (e: Exception) {
+                                    android.widget.Toast.makeText(context, "No app available to open this file", android.widget.Toast.LENGTH_SHORT).show()
+                                }
+                            } else {
+                                android.widget.Toast.makeText(context, "File URI not available", android.widget.Toast.LENGTH_SHORT).show()
+                            }
+                        },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(Icons.Filled.Visibility, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text(if (isPdf) "Open PDF" else "Open")
+                    }
+
+                    OutlinedButton(
+                        onClick = {
+                            val uriStr = entry.outputUri ?: entry.inputUri
+                            if (!uriStr.isNullOrEmpty()) {
+                                try {
+                                    com.scanflow.photocompressor.util.ShareHelper.shareImage(
+                                        context = context,
+                                        uri = android.net.Uri.parse(uriStr),
+                                        mimeType = mimeType,
+                                        title = if (isPdf) "Share PDF" else "Share Image"
+                                    )
+                                } catch (e: Exception) {
+                                    android.widget.Toast.makeText(context, "Could not share file", android.widget.Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(Icons.Filled.Share, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("Share")
+                    }
+
+                    IconButton(
+                        onClick = {
+                            viewModel.deleteEntry(entry.id)
+                            selectedEntry = null
+                        }
+                    ) {
+                        Icon(Icons.Filled.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error)
+                    }
+                }
+
+                if (!isPdf && onNavigateToEdit != null) {
+                    val editUriStr = entry.outputUri ?: entry.inputUri
+                    if (!editUriStr.isNullOrEmpty()) {
+                        OutlinedButton(
+                            onClick = {
+                                val uriToEdit = android.net.Uri.parse(editUriStr)
+                                selectedEntry = null
+                                onNavigateToEdit(uriToEdit)
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(Icons.Filled.Tune, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text("Edit / Further Compress Photo")
+                        }
+                    }
+                }
+            }
+        }
     }
 
     LazyColumn(
@@ -74,13 +247,31 @@ fun HistoryScreen(viewModel: HistoryViewModel = hiltViewModel()) {
 
         items(uiState.historyList, key = { it.id }) { entry ->
             Card(
+                onClick = { selectedEntry = entry },
                 modifier = Modifier.fillMaxWidth().animateContentSize(),
                 shape = RoundedCornerShape(12.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
             ) {
                 Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                     val previewUri = entry.outputUri ?: entry.inputUri
-                    if (!previewUri.isNullOrEmpty()) {
+                    val isPdf = entry.operation == com.scanflow.photocompressor.domain.model.OperationType.PDF || entry.outputFileName.endsWith(".pdf", ignoreCase = true)
+                    if (isPdf) {
+                        Surface(
+                            modifier = Modifier.size(48.dp),
+                            shape = RoundedCornerShape(8.dp),
+                            color = MaterialTheme.colorScheme.errorContainer
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    Icons.Filled.PictureAsPdf,
+                                    contentDescription = "PDF Document",
+                                    tint = MaterialTheme.colorScheme.onErrorContainer,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
+                        }
+                        Spacer(Modifier.width(10.dp))
+                    } else if (!previewUri.isNullOrEmpty()) {
                         com.scanflow.photocompressor.ui.components.SafeThumbnail(
                             data = previewUri,
                             contentDescription = entry.inputFileName,

@@ -31,10 +31,17 @@ import com.scanflow.photocompressor.util.ShareHelper
 @Composable
 fun WhatsAppScreen(
     onNavigateBack: () -> Unit,
+    initialUri: android.net.Uri? = null,
     viewModel: WhatsAppViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+
+    LaunchedEffect(initialUri) {
+        if (initialUri != null && uiState.selectedImageUri != initialUri) {
+            viewModel.selectImage(initialUri)
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -148,7 +155,7 @@ fun WhatsAppScreen(
                                 )
                                 Slider(
                                     value = uiState.config.customQuality.toFloat(),
-                                    onValueChange = { viewModel.updateCustomTargetSize(it.toInt()) },
+                                    onValueChange = { viewModel.updateCustomQuality(it.toInt()) },
                                     valueRange = 10f..100f,
                                     steps = 17
                                 )

@@ -81,6 +81,8 @@
     <string name="passport_background_title">Background Color</string>
     <string name="passport_print_layout_title">Print Layout (Copies per sheet)</string>
     <string name="passport_cut_marks">Add cut guide marks (dashed lines)</string>
+    <string name="passport_offline_title">100% Offline &amp; Private Studio</string>
+    <string name="passport_offline_desc">Photos are processed locally without cloud upload. Use framing and background tools to prepare standard identity photos instantly.</string>
     <string name="action_generate_passport_semantic">Generate passport photo sheet</string>
 
     <!-- Image to PDF (Rule 70) -->

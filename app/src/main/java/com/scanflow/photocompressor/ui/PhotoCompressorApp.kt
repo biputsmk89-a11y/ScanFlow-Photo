@@ -42,6 +42,7 @@ fun PhotoCompressorApp(
     val currentRoute = navBackStackEntry?.destination?.route
 
     var sharedUrisToHandle by remember { mutableStateOf<List<Uri>?>(null) }
+    var activeToolInitialUri by remember { mutableStateOf<Uri?>(null) }
 
     LaunchedEffect(incomingSharedUris) {
         if (!incomingSharedUris.isNullOrEmpty()) {
@@ -117,7 +118,12 @@ fun PhotoCompressorApp(
             }
 
             composable(Screen.History.route) {
-                HistoryScreen()
+                HistoryScreen(
+                    onNavigateToEdit = { uri ->
+                        activeToolInitialUri = uri
+                        navController.navigate(Screen.Compress.route)
+                    }
+                )
             }
 
             composable(Screen.Settings.route) {
@@ -130,7 +136,10 @@ fun PhotoCompressorApp(
                     initialUris = sharedUrisToHandle,
                     onNavigateBack = { navController.popBackStack() },
                     onNavigateToHistory = { navController.navigate(Screen.History.route) },
-                    onNavigateToEdit = { navController.navigate(Screen.Resize.route) }
+                    onNavigateToEdit = { uri ->
+                        activeToolInitialUri = uri
+                        navController.navigate(Screen.Resize.route)
+                    }
                 )
             }
 
@@ -142,40 +151,95 @@ fun PhotoCompressorApp(
             }
 
             composable(Screen.Resize.route) {
-                ResizeScreen(onNavigateBack = { navController.popBackStack() })
+                ResizeScreen(
+                    initialUri = activeToolInitialUri,
+                    onNavigateBack = {
+                        activeToolInitialUri = null
+                        navController.popBackStack()
+                    }
+                )
             }
 
             composable(Screen.Crop.route) {
-                CropScreen(onNavigateBack = { navController.popBackStack() })
+                CropScreen(
+                    initialUri = activeToolInitialUri,
+                    onNavigateBack = {
+                        activeToolInitialUri = null
+                        navController.popBackStack()
+                    }
+                )
             }
 
             composable(Screen.Rotate.route) {
-                RotateScreen(onNavigateBack = { navController.popBackStack() })
+                RotateScreen(
+                    initialUri = activeToolInitialUri,
+                    onNavigateBack = {
+                        activeToolInitialUri = null
+                        navController.popBackStack()
+                    }
+                )
             }
 
             composable(Screen.Watermark.route) {
-                WatermarkScreen(onNavigateBack = { navController.popBackStack() })
+                WatermarkScreen(
+                    initialUri = activeToolInitialUri,
+                    onNavigateBack = {
+                        activeToolInitialUri = null
+                        navController.popBackStack()
+                    }
+                )
             }
 
             composable(Screen.Convert.route) {
-                ConvertScreen(onNavigateBack = { navController.popBackStack() })
+                ConvertScreen(
+                    initialUri = activeToolInitialUri,
+                    onNavigateBack = {
+                        activeToolInitialUri = null
+                        navController.popBackStack()
+                    }
+                )
             }
 
             // Advanced tool destinations
             composable(Screen.Pdf.route) {
-                PdfScreen(onNavigateBack = { navController.popBackStack() })
+                PdfScreen(
+                    initialUri = activeToolInitialUri,
+                    initialUris = sharedUrisToHandle,
+                    onNavigateBack = {
+                        activeToolInitialUri = null
+                        navController.popBackStack()
+                    }
+                )
             }
 
             composable(Screen.Passport.route) {
-                PassportScreen(onNavigateBack = { navController.popBackStack() })
+                PassportScreen(
+                    initialUri = activeToolInitialUri,
+                    onNavigateBack = {
+                        activeToolInitialUri = null
+                        navController.popBackStack()
+                    }
+                )
             }
 
             composable(Screen.Social.route) {
-                SocialScreen(onNavigateBack = { navController.popBackStack() })
+                SocialScreen(
+                    initialUri = activeToolInitialUri,
+                    onNavigateBack = {
+                        activeToolInitialUri = null
+                        navController.popBackStack()
+                    }
+                )
             }
 
             composable(Screen.WhatsApp.route) {
-                WhatsAppScreen(onNavigateBack = { navController.popBackStack() })
+                WhatsAppScreen(
+                    initialUri = activeToolInitialUri,
+                    onNavigateBack = {
+                        activeToolInitialUri = null
+                        navController.popBackStack()
+                    }
+                )
             }
         }
     }

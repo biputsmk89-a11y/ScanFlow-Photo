@@ -24,7 +24,7 @@ data class CompressUiState(
     val processedCount: Int = 0,
     val totalToProcess: Int = 1,
     val currentProgress: Float = -1f,
-    val isSavedToGallery: Boolean = false,
+    val isSavedToGallery: Boolean = true,
     val result: CompressionResult? = null,
     val outputUris: List<Uri> = emptyList(),
     val error: String? = null,

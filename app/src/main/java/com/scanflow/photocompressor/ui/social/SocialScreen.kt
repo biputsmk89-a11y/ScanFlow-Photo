@@ -23,6 +23,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.scanflow.photocompressor.domain.model.SocialContentType
 import com.scanflow.photocompressor.domain.model.SocialPlatform
+import com.scanflow.photocompressor.ui.components.BeforeAfterPreview
 import com.scanflow.photocompressor.ui.components.ImagePickerCard
 import com.scanflow.photocompressor.ui.components.SafeImagePreview
 import com.scanflow.photocompressor.ui.preview.PreviewTier
@@ -34,10 +35,17 @@ import com.scanflow.photocompressor.util.ShareHelper
 @Composable
 fun SocialScreen(
     onNavigateBack: () -> Unit,
+    initialUri: android.net.Uri? = null,
     viewModel: SocialViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+
+    LaunchedEffect(initialUri) {
+        if (initialUri != null && uiState.selectedImageUri != initialUri) {
+            viewModel.selectImage(initialUri)
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -228,12 +236,21 @@ fun SocialScreen(
                                     fontWeight = FontWeight.Bold
                                 )
                                 Text(
-                                    text = "${ReductionCalculator.formatBytes(result.outputBytes)} • -${String.format("%.1f", result.reductionPercent)}%",
+                                    text = "${result.width} × ${result.height} px • ${ReductionCalculator.formatBytes(result.outputBytes)} • -${String.format("%.1f", result.reductionPercent)}%",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
 
-                                Spacer(modifier = Modifier.height(12.dp))
+                                Spacer(modifier = Modifier.height(14.dp))
+                                BeforeAfterPreview(
+                                    originalUri = uiState.selectedImageUri,
+                                    resultUri = result.outputUri,
+                                    originalSize = ReductionCalculator.formatBytes(result.originalBytes),
+                                    resultSize = "${result.width}×${result.height} (${ReductionCalculator.formatBytes(result.outputBytes)})",
+                                    savedPercentage = "-${String.format("%.1f", result.reductionPercent)}%"
+                                )
+
+                                Spacer(modifier = Modifier.height(14.dp))
                                 Button(
                                     onClick = {
                                         ShareHelper.shareImage(

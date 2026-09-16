@@ -62,7 +62,7 @@ class SocialMediaEngine @Inject constructor(
         imagePipelineEngine.execute(
             inputUri = sourceUri,
             pipeline = pipeline,
-            operationType = OperationType.RESIZE
+            operationType = OperationType.SOCIAL
         )
     }
 

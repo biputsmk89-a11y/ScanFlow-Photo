@@ -137,6 +137,22 @@ fun BatchScreen(
                             Text(if (uiState.isProcessing) "Processing..." else "Start Batch", fontWeight = FontWeight.SemiBold)
                         }
                     }
+
+                    uiState.error?.let { err ->
+                        item {
+                            Card(
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Text(
+                                    text = err,
+                                    modifier = Modifier.padding(14.dp),
+                                    color = MaterialTheme.colorScheme.onErrorContainer,
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                            }
+                        }
+                    }
                 } else {
                     val job = uiState.batchJob ?: return@LazyColumn
 

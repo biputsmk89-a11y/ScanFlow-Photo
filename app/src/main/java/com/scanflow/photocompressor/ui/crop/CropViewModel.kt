@@ -26,6 +26,8 @@ data class CropUiState(
     val panOffsetY: Float = 0f,
     val rotationDegrees: Int = 0,
     val quality: Int = 90,
+    val viewportWidth: Int = 0,
+    val viewportHeight: Int = 0,
     val isProcessing: Boolean = false,
     val result: CompressionResult? = null,
     val error: String? = null
@@ -122,6 +124,13 @@ class CropViewModel @Inject constructor(
         recalculateCropRegion()
     }
 
+    fun setViewportSize(width: Int, height: Int) {
+        if (_uiState.value.viewportWidth != width || _uiState.value.viewportHeight != height) {
+            _uiState.update { it.copy(viewportWidth = width, viewportHeight = height) }
+            recalculateCropRegion()
+        }
+    }
+
     fun setCropX(v: String) { _uiState.update { it.copy(cropX = v) } }
     fun setCropY(v: String) { _uiState.update { it.copy(cropY = v) } }
     fun setCropWidth(v: String) { _uiState.update { it.copy(cropWidth = v) } }
@@ -147,14 +156,33 @@ class CropViewModel @Inject constructor(
             else -> Pair(state.selectedAspectRatio.ratioX, state.selectedAspectRatio.ratioY)
         }
 
+        // Calculate scaling factor between viewport display pixels and bitmap source pixels
+        val scaleFactor = if (state.viewportWidth > 0 && state.viewportHeight > 0 && effWidth > 0 && effHeight > 0) {
+            val containerAspect = state.viewportWidth.toFloat() / state.viewportHeight.toFloat()
+            val imageAspect = effWidth.toFloat() / effHeight.toFloat()
+            val displayedWidth = if (imageAspect > containerAspect) {
+                state.viewportWidth.toFloat()
+            } else {
+                state.viewportHeight.toFloat() * imageAspect
+            }
+            effWidth.toFloat() / displayedWidth.coerceAtLeast(1f)
+        } else {
+            1f
+        }
+
+        // Invert pan: dragging the image rightwards (+panX) brings the left portion of the image into center view,
+        // so the crop window must move leftwards (-X) in image coordinates.
+        val bitmapPanX = -state.panOffsetX * scaleFactor
+        val bitmapPanY = -state.panOffsetY * scaleFactor
+
         val region = cropEngine.calculateAspectCropRegion(
             imageWidth = effWidth,
             imageHeight = effHeight,
             targetRatioX = ratioX,
             targetRatioY = ratioY,
             zoomScale = state.zoomScale,
-            panOffsetX = state.panOffsetX,
-            panOffsetY = state.panOffsetY
+            panOffsetX = bitmapPanX,
+            panOffsetY = bitmapPanY
         )
 
         _uiState.update {

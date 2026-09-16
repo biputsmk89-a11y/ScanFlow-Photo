@@ -30,7 +30,7 @@ import com.scanflow.photocompressor.ui.theme.Success
 fun CompressScreen(
     onNavigateBack: () -> Unit,
     onNavigateToHistory: (() -> Unit)? = null,
-    onNavigateToEdit: (() -> Unit)? = null,
+    onNavigateToEdit: ((android.net.Uri) -> Unit)? = null,
     initialUris: List<android.net.Uri>? = null,
     viewModel: CompressViewModel = hiltViewModel()
 ) {
@@ -183,28 +183,67 @@ fun CompressScreen(
                             modifier = Modifier.fillMaxWidth(),
                             verticalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            // Primary Action: SAVE
+                            // Auto-save notification badge
+                            Surface(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(12.dp),
+                                color = Success.copy(alpha = 0.12f),
+                                border = BorderStroke(1.dp, Success.copy(alpha = 0.3f))
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 14.dp, vertical = 10.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Filled.CheckCircle,
+                                        contentDescription = null,
+                                        tint = Success,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                    Column {
+                                        Text(
+                                            text = "Auto-saved to device",
+                                            style = MaterialTheme.typography.labelMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                        Text(
+                                            text = "Location: Pictures/PhotoCompressor",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+                            }
+
+                            // Primary Action: OPEN IN GALLERY
                             Button(
                                 onClick = {
-                                    viewModel.saveResult()
-                                    Toast.makeText(context, "Saved to device storage", Toast.LENGTH_SHORT).show()
+                                    try {
+                                        val intent = Intent(Intent.ACTION_VIEW).apply {
+                                            setDataAndType(result.outputUri, result.format.mimeType.ifEmpty { "image/*" })
+                                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                        }
+                                        context.startActivity(intent)
+                                    } catch (e: Exception) {
+                                        Toast.makeText(context, "No gallery app found to open photo", Toast.LENGTH_SHORT).show()
+                                    }
                                 },
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(52.dp),
                                 shape = RoundedCornerShape(14.dp),
                                 colors = ButtonDefaults.buttonColors(
-                                    containerColor = if (uiState.isSavedToGallery) Success else MaterialTheme.colorScheme.primary
+                                    containerColor = MaterialTheme.colorScheme.primary
                                 )
                             ) {
-                                Icon(
-                                    if (uiState.isSavedToGallery) Icons.Filled.Check else Icons.Filled.SaveAlt,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(20.dp)
-                                )
+                                Icon(Icons.Filled.Visibility, contentDescription = null, modifier = Modifier.size(20.dp))
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text = if (uiState.isSavedToGallery) "SAVED" else "SAVE",
+                                    text = "OPEN IN GALLERY",
                                     fontWeight = FontWeight.Bold,
                                     style = MaterialTheme.typography.labelLarge
                                 )
@@ -260,7 +299,7 @@ fun CompressScreen(
                             // Secondary Action: EDIT
                             if (onNavigateToEdit != null) {
                                 OutlinedButton(
-                                    onClick = onNavigateToEdit,
+                                    onClick = { onNavigateToEdit(result.outputUri) },
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .height(48.dp),

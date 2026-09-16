@@ -59,6 +59,22 @@ class PassportViewModel @Inject constructor(
         _uiState.update { it.copy(config = it.config.copy(panX = panX, panY = panY), result = null) }
     }
 
+    fun updateTransform(zoomDelta: Float, panDeltaX: Float, panDeltaY: Float) {
+        _uiState.update { current ->
+            val newZoom = (current.config.zoom * zoomDelta).coerceIn(0.5f, 3.5f)
+            val newPanX = current.config.panX + panDeltaX
+            val newPanY = current.config.panY + panDeltaY
+            current.copy(
+                config = current.config.copy(
+                    zoom = newZoom,
+                    panX = newPanX,
+                    panY = newPanY
+                ),
+                result = null
+            )
+        }
+    }
+
     fun updateRotation(degrees: Float) {
         _uiState.update { it.copy(config = it.config.copy(rotationDegrees = degrees), result = null) }
     }

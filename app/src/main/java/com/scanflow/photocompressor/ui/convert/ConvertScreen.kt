@@ -1,6 +1,7 @@
 package com.scanflow.photocompressor.ui.convert
 
 import android.content.Intent
+import com.scanflow.photocompressor.util.ShareHelper
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -22,9 +23,19 @@ import com.scanflow.photocompressor.ui.components.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ConvertScreen(onNavigateBack: () -> Unit, viewModel: ConvertViewModel = hiltViewModel()) {
+fun ConvertScreen(
+    onNavigateBack: () -> Unit,
+    initialUri: android.net.Uri? = null,
+    viewModel: ConvertViewModel = hiltViewModel()
+) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+
+    LaunchedEffect(initialUri) {
+        if (initialUri != null && uiState.selectedImageUri != initialUri) {
+            viewModel.selectImage(initialUri)
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -222,12 +233,7 @@ fun ConvertScreen(onNavigateBack: () -> Unit, viewModel: ConvertViewModel = hilt
                             // Primary Action: Share
                             Button(
                                 onClick = {
-                                    val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                                        type = result.format.mimeType
-                                        putExtra(Intent.EXTRA_STREAM, result.outputUri)
-                                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                    }
-                                    context.startActivity(Intent.createChooser(shareIntent, "Share Converted Image"))
+                                    ShareHelper.shareImage(context, result.outputUri, result.format.mimeType, "Share Converted Image")
                                 },
                                 modifier = Modifier.fillMaxWidth().height(50.dp),
                                 shape = RoundedCornerShape(14.dp)

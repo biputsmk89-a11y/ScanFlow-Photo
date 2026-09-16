@@ -20,7 +20,11 @@ class PresetRepositoryImpl @Inject constructor(
 
     override fun getAllPresets(): Flow<List<CompressionPreset>> {
         return presetDao.getAllPresets().map { entities ->
-            entities.map { it.toDomain() }
+            if (entities.isEmpty()) {
+                CompressionPreset.defaults
+            } else {
+                entities.map { it.toDomain() }
+            }
         }
     }
 

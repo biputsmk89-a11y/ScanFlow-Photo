@@ -61,42 +61,56 @@ class CompressionEngine @Inject constructor() {
             var dimensionReductionAttempt = 0
 
             while (dimensionReductionAttempt <= maxDimensionReductions) {
-                // 1. INITIAL QUALITY RANGE
-                var low = minQuality
-                var high = maxQuality
-                var bestBytes: ByteArray? = null
-                var bestQuality = minQuality
-
-                // 2. ENCODE MIDPOINT & MEASURE OUTPUT (Iterative Binary Search)
-                var iterations = 0
-                while (low <= high && iterations < maxQualityIterations) {
-                    iterations++
-                    val mid = (low + high) / 2
-                    val encoded = compress(workingBitmap, format, mid)
-
+                if (format == ImageFormat.PNG) {
+                    // PNG is lossless; quality parameter does not affect file size.
+                    // Encode once at full quality (100) and evaluate.
+                    val encoded = compress(workingBitmap, format, 100)
                     if (encoded.size <= targetSizeBytes) {
-                        // Candidate satisfies target size: record it and try higher quality
-                        bestBytes = encoded
-                        bestQuality = mid
-                        low = mid + 1
-                    } else {
-                        // Output too large: reduce quality
-                        high = mid - 1
+                        return TargetCompressionResult(
+                            bytes = encoded,
+                            quality = 100,
+                            finalBitmap = workingBitmap,
+                            isFeasible = true,
+                            message = "Target reached"
+                        )
+                    }
+                } else {
+                    // Lossy formats (JPEG, WEBP): Perform adaptive quality binary search
+                    var low = minQuality
+                    var high = maxQuality
+                    var bestBytes: ByteArray? = null
+                    var bestQuality = minQuality
+
+                    var iterations = 0
+                    while (low <= high && iterations < maxQualityIterations) {
+                        iterations++
+                        val mid = (low + high) / 2
+                        val encoded = compress(workingBitmap, format, mid)
+
+                        if (encoded.size <= targetSizeBytes) {
+                            // Candidate satisfies target size: record it and try higher quality
+                            bestBytes = encoded
+                            bestQuality = mid
+                            low = mid + 1
+                        } else {
+                            // Output too large: reduce quality
+                            high = mid - 1
+                        }
+                    }
+
+                    // TARGET MET?
+                    if (bestBytes != null && bestBytes.size <= targetSizeBytes) {
+                        return TargetCompressionResult(
+                            bytes = bestBytes,
+                            quality = bestQuality,
+                            finalBitmap = workingBitmap,
+                            isFeasible = true,
+                            message = "Target reached"
+                        )
                     }
                 }
 
-                // 3. TARGET MET?
-                if (bestBytes != null && bestBytes.size <= targetSizeBytes) {
-                    return TargetCompressionResult(
-                        bytes = bestBytes,
-                        quality = bestQuality,
-                        finalBitmap = workingBitmap,
-                        isFeasible = true,
-                        message = "Target reached"
-                    )
-                }
-
-                // If quality reduction was not enough, proceed to DIMENSION REDUCTION
+                // If quality reduction was not enough (or format is PNG), proceed to DIMENSION REDUCTION
                 if (dimensionReductionAttempt < maxDimensionReductions &&
                     workingBitmap.width > 240 && workingBitmap.height > 240
                 ) {
@@ -117,13 +131,14 @@ class CompressionEngine @Inject constructor() {
 
             // Target size not feasible within safe quality and dimension limits.
             // Produce valid, non-corrupt output at minQuality with clear explanation.
-            val fallbackBytes = compress(workingBitmap, format, minQuality)
+            val fallbackQuality = if (format == ImageFormat.PNG) 100 else minQuality
+            val fallbackBytes = compress(workingBitmap, format, fallbackQuality)
             val isFeasible = fallbackBytes.size <= targetSizeBytes
 
             return TargetCompressionResult(
                 bytes = fallbackBytes,
                 finalBitmap = workingBitmap,
-                quality = minQuality,
+                quality = fallbackQuality,
                 isFeasible = isFeasible,
                 message = if (!isFeasible) {
                     "The target size could not be reached without significantly reducing image quality or dimensions."

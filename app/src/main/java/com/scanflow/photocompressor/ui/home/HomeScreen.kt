@@ -45,7 +45,7 @@ fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    var isMoreToolsExpanded by remember { mutableStateOf(false) }
+    var isMoreToolsExpanded by remember { mutableStateOf(true) }
 
     LazyColumn(
         modifier = Modifier

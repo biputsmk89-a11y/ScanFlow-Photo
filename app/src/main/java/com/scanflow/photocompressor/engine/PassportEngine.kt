@@ -11,6 +11,8 @@ import android.graphics.RectF
 import android.net.Uri
 import com.scanflow.photocompressor.data.storage.FileManager
 import com.scanflow.photocompressor.domain.model.*
+import com.scanflow.photocompressor.domain.repository.HistoryRepository
+import com.scanflow.photocompressor.domain.repository.ImageRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -31,7 +33,9 @@ class PassportEngine @Inject constructor(
     @ApplicationContext private val context: Context,
     private val imagePipelineEngine: ImagePipelineEngine,
     private val bitmapUtils: BitmapUtils,
-    private val fileManager: FileManager
+    private val fileManager: FileManager,
+    private val imageRepository: ImageRepository,
+    private val historyRepository: HistoryRepository
 ) {
 
     /**
@@ -125,20 +129,43 @@ class PassportEngine @Inject constructor(
             if (config.printLayout == PassportPrintLayout.COPIES_1) {
                 // Single photo layout is already complete
                 val tempFile = fileManager.createTempFile("passport_single_", "jpg")
-                FileOutputStream(tempFile).use { out ->
-                    passportBitmap.compress(Bitmap.CompressFormat.JPEG, 95, out)
-                }
-                val outputUri = Uri.fromFile(tempFile)
-                passportBitmap.recycle()
+                try {
+                    FileOutputStream(tempFile).use { out ->
+                        passportBitmap.compress(Bitmap.CompressFormat.JPEG, 95, out)
+                    }
+                    val fileName = "passport_${config.spec.displayName.replace(" ", "_")}_${System.currentTimeMillis()}"
+                    val finalSavedUri = imageRepository.saveFromFile(tempFile, fileName, ImageFormat.JPEG)
+                    val savedSize = tempFile.length()
 
-                return@withContext Result.success(
-                    baseResult.copy(
-                        outputUri = outputUri,
+                    val result = baseResult.copy(
+                        outputUri = finalSavedUri,
                         width = config.spec.targetWidthPx,
                         height = config.spec.targetHeightPx,
-                        compressedSize = tempFile.length()
+                        compressedSize = savedSize
                     )
-                )
+
+                    runCatching {
+                        historyRepository.addEntry(
+                            ProcessingHistory(
+                                inputUri = sourceUri.toString(),
+                                outputUri = finalSavedUri.toString(),
+                                inputFileName = "passport_source",
+                                outputFileName = "$fileName.jpg",
+                                originalBytes = baseResult.originalSize,
+                                outputBytes = savedSize,
+                                operationType = OperationType.PASSPORT,
+                                width = config.spec.targetWidthPx,
+                                height = config.spec.targetHeightPx,
+                                createdAt = System.currentTimeMillis()
+                            )
+                        )
+                    }
+
+                    return@withContext Result.success(result)
+                } finally {
+                    passportBitmap.recycle()
+                    if (tempFile.exists()) tempFile.delete()
+                }
             }
 
             // Multi-photo print sheet composition
@@ -146,22 +173,45 @@ class PassportEngine @Inject constructor(
             passportBitmap.recycle()
 
             val tempFile = fileManager.createTempFile("passport_sheet_", "jpg")
-            FileOutputStream(tempFile).use { out ->
-                sheetBitmap.compress(Bitmap.CompressFormat.JPEG, 95, out)
-            }
-            val outputUri = Uri.fromFile(tempFile)
-            val sheetWidth = sheetBitmap.width
-            val sheetHeight = sheetBitmap.height
-            sheetBitmap.recycle()
+            try {
+                FileOutputStream(tempFile).use { out ->
+                    sheetBitmap.compress(Bitmap.CompressFormat.JPEG, 95, out)
+                }
+                val sheetWidth = sheetBitmap.width
+                val sheetHeight = sheetBitmap.height
+                val fileName = "passport_sheet_${config.spec.displayName.replace(" ", "_")}_${System.currentTimeMillis()}"
+                val finalSavedUri = imageRepository.saveFromFile(tempFile, fileName, ImageFormat.JPEG)
+                val savedSize = tempFile.length()
 
-            Result.success(
-                baseResult.copy(
-                    outputUri = outputUri,
+                val result = baseResult.copy(
+                    outputUri = finalSavedUri,
                     width = sheetWidth,
                     height = sheetHeight,
-                    compressedSize = tempFile.length()
+                    compressedSize = savedSize
                 )
-            )
+
+                runCatching {
+                    historyRepository.addEntry(
+                        ProcessingHistory(
+                            inputUri = sourceUri.toString(),
+                            outputUri = finalSavedUri.toString(),
+                            inputFileName = "passport_source",
+                            outputFileName = "$fileName.jpg",
+                            originalBytes = baseResult.originalSize,
+                            outputBytes = savedSize,
+                            operationType = OperationType.PASSPORT,
+                            width = sheetWidth,
+                            height = sheetHeight,
+                            createdAt = System.currentTimeMillis()
+                        )
+                    )
+                }
+
+                Result.success(result)
+            } finally {
+                sheetBitmap.recycle()
+                if (tempFile.exists()) tempFile.delete()
+            }
         } catch (e: Exception) {
             Result.failure(e)
         }

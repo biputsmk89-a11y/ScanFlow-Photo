@@ -61,7 +61,7 @@ class FileNamingEngine @Inject constructor() {
         targetFormat: ImageFormat = ImageFormat.JPEG
     ): String {
         val baseName = sanitizeBaseName(originalName)
-        val ext = targetFormat.extension
+        val ext = if (operationType == OperationType.PDF) "pdf" else targetFormat.extension
 
         val suffix = when (operationType) {
             OperationType.COMPRESS -> "compressed"
@@ -71,6 +71,10 @@ class FileNamingEngine @Inject constructor() {
             OperationType.WATERMARK -> "watermarked"
             OperationType.CONVERT -> ext // e.g. IMG_1234_webp.webp
             OperationType.BATCH -> "compressed"
+            OperationType.PDF -> "document"
+            OperationType.PASSPORT -> "passport"
+            OperationType.SOCIAL -> "social"
+            OperationType.WHATSAPP -> "whatsapp"
         }
 
         return "${baseName}_${suffix}.${ext}"

@@ -31,10 +31,24 @@ import com.scanflow.photocompressor.util.ShareHelper
 @Composable
 fun PdfScreen(
     onNavigateBack: () -> Unit,
+    initialUri: android.net.Uri? = null,
+    initialUris: List<android.net.Uri>? = null,
     viewModel: PdfViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+
+    LaunchedEffect(initialUri, initialUris) {
+        val urisToAdd = mutableListOf<android.net.Uri>()
+        if (initialUris != null) {
+            urisToAdd.addAll(initialUris)
+        } else if (initialUri != null) {
+            urisToAdd.add(initialUri)
+        }
+        if (urisToAdd.isNotEmpty() && uiState.selectedImages.isEmpty()) {
+            viewModel.addImages(urisToAdd)
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -289,19 +303,71 @@ fun PdfScreen(
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
-                                Spacer(modifier = Modifier.height(12.dp))
+
+                                if (uiState.isSavedToDocuments) {
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Surface(
+                                        shape = RoundedCornerShape(8.dp),
+                                        color = Success.copy(alpha = 0.12f)
+                                    ) {
+                                        Text(
+                                            text = "Saved to Documents/PhotoCompressor",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                                        )
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(16.dp))
+
+                                // Primary Action: OPEN PDF
                                 Button(
                                     onClick = {
-                                        val uri = androidx.core.content.FileProvider.getUriForFile(
+                                        try {
+                                            val targetUri = uiState.savedPdfUri ?: androidx.core.content.FileProvider.getUriForFile(
+                                                context,
+                                                "${context.packageName}.fileprovider",
+                                                genFile
+                                            )
+                                            val openIntent = android.content.Intent(android.content.Intent.ACTION_VIEW).apply {
+                                                setDataAndType(targetUri, "application/pdf")
+                                                addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                            }
+                                            context.startActivity(openIntent)
+                                        } catch (e: Exception) {
+                                            android.widget.Toast.makeText(context, "No app found to open PDF", android.widget.Toast.LENGTH_SHORT).show()
+                                        }
+                                    },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(48.dp),
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Icon(Icons.Filled.Visibility, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text("Open PDF", fontWeight = FontWeight.Bold)
+                                }
+
+                                Spacer(modifier = Modifier.height(8.dp))
+
+                                // Secondary Action: SHARE PDF
+                                OutlinedButton(
+                                    onClick = {
+                                        val uri = uiState.savedPdfUri ?: androidx.core.content.FileProvider.getUriForFile(
                                             context,
                                             "${context.packageName}.fileprovider",
                                             genFile
                                         )
                                         ShareHelper.shareImage(context, uri, "application/pdf", "Share PDF")
                                     },
-                                    modifier = Modifier.fillMaxWidth()
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(48.dp),
+                                    shape = RoundedCornerShape(12.dp)
                                 ) {
-                                    Icon(Icons.Filled.Share, null)
+                                    Icon(Icons.Filled.Share, contentDescription = null, modifier = Modifier.size(18.dp))
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Text("Share PDF")
                                 }

@@ -79,6 +79,26 @@ class FileNamingEngineTest {
     }
 
     @Test
+    fun `generateFileName produces standard naming for all new operation types`() {
+        assertEquals(
+            "IMG_1234_document.pdf",
+            fileNamingEngine.generateFileName("IMG_1234.jpg", OperationType.PDF)
+        )
+        assertEquals(
+            "IMG_1234_passport.jpg",
+            fileNamingEngine.generateFileName("IMG_1234.jpg", OperationType.PASSPORT, ImageFormat.JPEG)
+        )
+        assertEquals(
+            "IMG_1234_social.jpg",
+            fileNamingEngine.generateFileName("IMG_1234.jpg", OperationType.SOCIAL, ImageFormat.JPEG)
+        )
+        assertEquals(
+            "IMG_1234_whatsapp.jpg",
+            fileNamingEngine.generateFileName("IMG_1234.jpg", OperationType.WHATSAPP, ImageFormat.JPEG)
+        )
+    }
+
+    @Test
     fun `resolveConflict returns original name if no file collision`() {
         val resolved = fileNamingEngine.resolveConflict(
             targetFileName = "IMG_1234_compressed.jpg",
