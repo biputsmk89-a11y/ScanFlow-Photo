@@ -1,7 +1,7 @@
 <resources>
     <string name="app_name">ScanFlow Photo</string>
     <string name="app_description">Kompres, ubah ukuran, potong, konversi, dan optimalkan foto dengan cepat dan privat.</string>
-    <string name="privacy_badge">100% Offline &amp; Privat</string>
+    <string name="privacy_badge" formatted="false">100% Offline &amp; Privat</string>
     <string name="no_account_badge">Tanpa Perlu Login</string>
     <string name="no_account_desc">Semua pemrosesan foto utama dilakukan secara lokal pada perangkat Anda tanpa memerlukan akun.</string>
 
@@ -81,7 +81,7 @@
     <string name="passport_background_title">Warna Latar Belakang</string>
     <string name="passport_print_layout_title">Tata Letak Cetak (Salinan per lembar)</string>
     <string name="passport_cut_marks">Tambahkan garis panduan potong (garis putus-putus)</string>
-    <string name="passport_offline_title">100% Studio Privat &amp; Offline</string>
+    <string name="passport_offline_title" formatted="false">100% Studio Privat &amp; Offline</string>
     <string name="passport_offline_desc">Foto diproses secara lokal tanpa unggahan cloud. Gunakan alat pembingkaian dan warna latar untuk menyiapkan pasfoto standar secara instan.</string>
     <string name="action_generate_passport_semantic">Buat lembar cetak pasfoto</string>
 
