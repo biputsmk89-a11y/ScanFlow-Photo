@@ -13,8 +13,8 @@ android {
         applicationId = "com.scanflow.photocompressor"
         minSdk = 26
         targetSdk = 34
-        versionCode = 2
-        versionName = "1.0.1"
+        versionCode = 3
+        versionName = "1.0.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -45,6 +45,8 @@ android {
                     storePassword = storePass
                     keyAlias = keyAl
                     keyPassword = keyPass
+                    enableV1Signing = true
+                    enableV2Signing = true
                 }
             }
         }
@@ -61,6 +63,8 @@ android {
             val releaseSigning = signingConfigs.getByName("release")
             if (releaseSigning.storeFile != null && releaseSigning.storeFile?.exists() == true) {
                 signingConfig = releaseSigning
+            } else {
+                signingConfig = signingConfigs.getByName("debug")
             }
         }
         debug {

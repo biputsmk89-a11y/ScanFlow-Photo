@@ -63,14 +63,14 @@ fun HomeScreen(
             ) {
                 Column {
                     Text(
-                        text = "Photo Compressor",
+                        text = "ScanFlow Photo",
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onBackground
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = "Image Tools",
+                        text = "Photo Compressor + Image Tools",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
