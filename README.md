@@ -13,7 +13,17 @@
 # ScanFlow Photo — Photo Compressor + Image Studio
 
 A state-of-the-art, 100% offline Android photo utility built with Jetpack Compose, Material 3, Kotlin Coroutines, and Clean Architecture.
+Modern UI/UX design crafted with Google Stitch.
 
+## 📱 UI Showcase (Google Stitch System)
+
+<p align="center">
+  <img src=".github/assets/ui_home.png" width="19%" alt="Home" />
+  <img src=".github/assets/ui_compress.png" width="19%" alt="Compress & Target Size" />
+  <img src=".github/assets/ui_batch.png" width="19%" alt="Batch Processing" />
+  <img src=".github/assets/ui_passport.png" width="19%" alt="Passport & ID Studio" />
+  <img src=".github/assets/ui_pdf.png" width="19%" alt="PDF Maker" />
+</p>
 
 ## 🌟 Key Features
 
