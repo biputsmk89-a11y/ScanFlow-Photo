@@ -181,6 +181,52 @@ fun CompressScreen(
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
+                    // Error Alert Banner (if compression fails)
+                    if (uiState.error != null) {
+                        item {
+                            Surface(
+                                shape = RoundedCornerShape(14.dp),
+                                color = MaterialTheme.colorScheme.errorContainer,
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.5f)),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(14.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Filled.ErrorOutline,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.error,
+                                        modifier = Modifier.size(22.dp)
+                                    )
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = "Compression Issue",
+                                            style = MaterialTheme.typography.labelMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onErrorContainer
+                                        )
+                                        Text(
+                                            text = uiState.error ?: "",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onErrorContainer
+                                        )
+                                    }
+                                    IconButton(onClick = { viewModel.clearError() }) {
+                                        Icon(
+                                            imageVector = Icons.Filled.Close,
+                                            contentDescription = "Dismiss",
+                                            tint = MaterialTheme.colorScheme.onErrorContainer,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
                     // Top Context Indicator
                     item {
                         Row(
@@ -261,7 +307,6 @@ fun CompressScreen(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .aspectRatio(4f / 3f)
-                                        .background(MaterialTheme.colorScheme.surfaceContainerHigh)
                                 ) {
                                     if (uiState.selectedImageUri != null) {
                                         AsyncImage(
@@ -300,6 +345,19 @@ fun CompressScreen(
                                         horizontalArrangement = Arrangement.SpaceBetween,
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
+                                        val targetBadgeText = when (uiState.mode) {
+                                            CompressionMode.TARGET_SIZE -> {
+                                                val label = if (uiState.targetSizePreset == TargetSizePreset.CUSTOM) {
+                                                    "${uiState.customTargetSizeKB.ifEmpty { "500" }} KB"
+                                                } else {
+                                                    uiState.targetSizePreset.label
+                                                }
+                                                "Target: $label"
+                                            }
+                                            CompressionMode.QUICK -> "Profile: ${uiState.quickPreset.label}"
+                                            CompressionMode.QUALITY -> "Quality: ${uiState.quality}%"
+                                        }
+
                                         Surface(
                                             shape = RoundedCornerShape(9999.dp),
                                             color = InverseSurface.copy(alpha = 0.85f)
@@ -316,7 +374,7 @@ fun CompressScreen(
                                                     modifier = Modifier.size(16.dp)
                                                 )
                                                 Text(
-                                                    text = "Target: ${uiState.targetSizePreset.label}",
+                                                    text = targetBadgeText,
                                                     style = MaterialTheme.typography.labelMedium,
                                                     fontWeight = FontWeight.Bold,
                                                     color = TertiaryFixed
@@ -324,7 +382,7 @@ fun CompressScreen(
                                             }
                                         }
 
-                                        val resText = uiState.imageInfo?.resolution ?: "4032 × 3024"
+                                        val resText = uiState.imageInfo?.resolution ?: "Ready"
                                         Surface(
                                             shape = RoundedCornerShape(9999.dp),
                                             color = InverseSurface.copy(alpha = 0.85f)
@@ -364,7 +422,7 @@ fun CompressScreen(
                                             horizontalArrangement = Arrangement.spacedBy(4.dp)
                                         ) {
                                             Text(
-                                                text = uiState.imageInfo?.fileName ?: "IMG_2034.jpg",
+                                                text = uiState.imageInfo?.fileName ?: "No photo selected",
                                                 style = MaterialTheme.typography.titleSmall,
                                                 fontWeight = FontWeight.Bold,
                                                 color = MaterialTheme.colorScheme.onSurface,
@@ -399,9 +457,9 @@ fun CompressScreen(
                                                 style = MaterialTheme.typography.labelSmall,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                                             )
-                                            val origSizeMB = uiState.imageInfo?.fileSizeMB ?: 8.4
+                                            val origSizeText = uiState.imageInfo?.let { formatBytes(it.fileSize) } ?: "0 KB"
                                             Text(
-                                                text = "${String.format("%.1f", origSizeMB)} MB",
+                                                text = origSizeText,
                                                 style = MaterialTheme.typography.labelLarge,
                                                 fontWeight = FontWeight.Bold,
                                                 color = Primary
@@ -443,10 +501,15 @@ fun CompressScreen(
                                 val isBalanced = uiState.mode == CompressionMode.QUICK && uiState.quickPreset == QuickPreset.BALANCED
                                 val isHigh = uiState.mode == CompressionMode.QUICK && uiState.quickPreset == QuickPreset.HIGH_QUALITY
 
+                                val origBytes = uiState.imageInfo?.fileSize ?: 0L
+                                val smallTag = if (origBytes > 0L) "~${formatBytes((origBytes * 0.25).toLong().coerceAtLeast(10240L))}" else "~300 KB"
+                                val balancedTag = "Recommended"
+                                val fidelityTag = if (origBytes > 0L) "~${formatBytes((origBytes * 0.80).toLong().coerceAtLeast(10240L))}" else "~1.5 MB"
+
                                 StitchProfileCard(
                                     title = "Small",
                                     subtitle = "Quick send",
-                                    tag = "~300 KB",
+                                    tag = smallTag,
                                     icon = Icons.Filled.Compress,
                                     isSelected = isSmall,
                                     onClick = { viewModel.setQuickPreset(QuickPreset.SMALL) },
@@ -456,7 +519,7 @@ fun CompressScreen(
                                 StitchProfileCard(
                                     title = "Balanced",
                                     subtitle = "Best clarity",
-                                    tag = "Recommended",
+                                    tag = balancedTag,
                                     icon = Icons.Filled.Tune,
                                     isSelected = isBalanced,
                                     onClick = { viewModel.setQuickPreset(QuickPreset.BALANCED) },
@@ -466,7 +529,7 @@ fun CompressScreen(
                                 StitchProfileCard(
                                     title = "Fidelity",
                                     subtitle = "Fine details",
-                                    tag = "~1.5 MB",
+                                    tag = fidelityTag,
                                     icon = Icons.Filled.HighQuality,
                                     isSelected = isHigh,
                                     onClick = { viewModel.setQuickPreset(QuickPreset.HIGH_QUALITY) },
@@ -752,11 +815,22 @@ fun CompressScreen(
                         }
                     }
 
-                    // Space Savings Preview Banner
+                    // Space Savings Preview Banner (Dynamic, 100% Real Math)
                     item {
+                        val savings = remember(uiState.mode, uiState.quickPreset, uiState.targetSizePreset, uiState.customTargetSizeKB, uiState.quality, uiState.imageInfo?.fileSize) {
+                            calculateSavingsPreview(
+                                mode = uiState.mode,
+                                quickPreset = uiState.quickPreset,
+                                targetSizePreset = uiState.targetSizePreset,
+                                customTargetSizeKB = uiState.customTargetSizeKB,
+                                quality = uiState.quality,
+                                originalBytes = uiState.imageInfo?.fileSize ?: 0L
+                            )
+                        }
+
                         Surface(
                             shape = RoundedCornerShape(14.dp),
-                            color = MaterialTheme.colorScheme.secondaryContainer
+                            color = if (savings.isPositive) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh
                         ) {
                             Row(
                                 modifier = Modifier
@@ -767,16 +841,17 @@ fun CompressScreen(
                             ) {
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                    modifier = Modifier.weight(1f)
                                 ) {
                                     Surface(
                                         shape = CircleShape,
-                                        color = Primary,
+                                        color = if (savings.isPositive) Primary else MaterialTheme.colorScheme.outline,
                                         modifier = Modifier.size(38.dp)
                                     ) {
                                         Box(contentAlignment = Alignment.Center) {
                                             Icon(
-                                                imageVector = Icons.Filled.SaveAlt,
+                                                imageVector = if (savings.isPositive) Icons.Filled.SaveAlt else Icons.Filled.Info,
                                                 contentDescription = null,
                                                 tint = Color.White,
                                                 modifier = Modifier.size(20.dp)
@@ -785,13 +860,13 @@ fun CompressScreen(
                                     }
                                     Column {
                                         Text(
-                                            text = "Saving ~7.9 MB space",
+                                            text = savings.title,
                                             style = MaterialTheme.typography.labelLarge,
                                             fontWeight = FontWeight.Bold,
                                             color = MaterialTheme.colorScheme.onSurface
                                         )
                                         Text(
-                                            text = "Ideal for email sharing and messaging apps",
+                                            text = savings.subtitle,
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSecondaryContainer
                                         )
@@ -864,7 +939,18 @@ fun CompressScreen(
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 val ctaText = if (uiState.selectedImageUri != null) {
-                                    "Compress Photo • ${uiState.targetSizePreset.label}"
+                                    when (uiState.mode) {
+                                        CompressionMode.TARGET_SIZE -> {
+                                            val label = if (uiState.targetSizePreset == TargetSizePreset.CUSTOM) {
+                                                "${uiState.customTargetSizeKB.ifEmpty { "500" }} KB"
+                                            } else {
+                                                uiState.targetSizePreset.label
+                                            }
+                                            "Compress Photo • $label"
+                                        }
+                                        CompressionMode.QUICK -> "Compress Photo • ${uiState.quickPreset.label}"
+                                        CompressionMode.QUALITY -> "Compress Photo • ${uiState.quality}%"
+                                    }
                                 } else {
                                     "Select Photo to Compress"
                                 }
@@ -1118,14 +1204,16 @@ private fun StitchCompressResultContent(
                                 verticalAlignment = Alignment.Bottom,
                                 horizontalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
+                                val displayPct = result.savedPercentage.coerceAtLeast(0.0)
+                                val statusLabel = if (result.savedPercentage > 0.0) "smaller" else "optimized"
                                 Text(
-                                    text = "${String.format("%.1f", result.savedPercentage)}%",
+                                    text = "${String.format("%.1f", displayPct)}%",
                                     style = MaterialTheme.typography.displaySmall,
                                     fontWeight = FontWeight.Bold,
                                     color = Primary
                                 )
                                 Text(
-                                    text = "smaller",
+                                    text = statusLabel,
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold,
                                     color = Tertiary
@@ -1580,3 +1668,78 @@ private fun StitchCompressResultContent(
         }
     }
 }
+
+private data class SavingsPreviewData(
+    val title: String,
+    val subtitle: String,
+    val isPositive: Boolean
+)
+
+private fun calculateSavingsPreview(
+    mode: CompressionMode,
+    quickPreset: QuickPreset,
+    targetSizePreset: TargetSizePreset,
+    customTargetSizeKB: String,
+    quality: Int,
+    originalBytes: Long
+): SavingsPreviewData {
+    if (originalBytes <= 0L) {
+        return SavingsPreviewData(
+            title = "Select a photo to preview savings",
+            subtitle = "100% on-device offline processing",
+            isPositive = true
+        )
+    }
+
+    return when (mode) {
+        CompressionMode.TARGET_SIZE -> {
+            val targetBytes = if (targetSizePreset == TargetSizePreset.CUSTOM) {
+                (customTargetSizeKB.toLongOrNull() ?: 500L) * 1024L
+            } else {
+                targetSizePreset.bytes
+            }
+            if (targetBytes < originalBytes) {
+                val savedBytes = originalBytes - targetBytes
+                val pct = (savedBytes.toDouble() / originalBytes * 100).coerceIn(1.0, 99.0)
+                SavingsPreviewData(
+                    title = "Saving ~${formatBytes(savedBytes)} space (${String.format("%.0f", pct)}%)",
+                    subtitle = "Ideal for email sharing and messaging apps",
+                    isPositive = true
+                )
+            } else {
+                SavingsPreviewData(
+                    title = "Target (${formatBytes(targetBytes)}) is larger than photo (${formatBytes(originalBytes)})",
+                    subtitle = "Will compress at maximum clarity without increasing size",
+                    isPositive = false
+                )
+            }
+        }
+        CompressionMode.QUICK -> {
+            val ratio = when (quickPreset) {
+                QuickPreset.SMALL -> 0.25
+                QuickPreset.BALANCED -> 0.50
+                QuickPreset.HIGH_QUALITY -> 0.80
+            }
+            val estOutput = (originalBytes * ratio).toLong()
+            val savedBytes = (originalBytes - estOutput).coerceAtLeast(0L)
+            val pct = ((1.0 - ratio) * 100).coerceIn(5.0, 95.0)
+            SavingsPreviewData(
+                title = "Saving ~${formatBytes(savedBytes)} space (~${String.format("%.0f", pct)}%)",
+                subtitle = "Preset: ${quickPreset.label} • Balanced for quality and storage",
+                isPositive = true
+            )
+        }
+        CompressionMode.QUALITY -> {
+            val ratio = (quality.toDouble() / 100.0).coerceIn(0.2, 0.95)
+            val estOutput = (originalBytes * ratio).toLong()
+            val savedBytes = (originalBytes - estOutput).coerceAtLeast(0L)
+            val pct = ((1.0 - ratio) * 100).coerceIn(5.0, 80.0)
+            SavingsPreviewData(
+                title = "Saving ~${formatBytes(savedBytes)} space (~${String.format("%.0f", pct)}%)",
+                subtitle = "Manual quality cap at $quality%",
+                isPositive = true
+            )
+        }
+    }
+}
+

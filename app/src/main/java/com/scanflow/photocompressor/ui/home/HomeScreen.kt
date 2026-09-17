@@ -438,7 +438,7 @@ fun HomeScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "Last Processed Photo",
+                                text = if (latestHistory != null) "Last Processed Photo" else "Photo Engine Ready",
                                 style = MaterialTheme.typography.labelLarge,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface
@@ -447,14 +447,24 @@ fun HomeScreen(
                                 shape = RoundedCornerShape(9999.dp),
                                 color = MaterialTheme.colorScheme.surfaceContainer
                             ) {
-                                val savedPct = latestHistory?.savedPercentage ?: 72.0
-                                Text(
-                                    text = "Saved ${String.format("%.0f", savedPct)}%",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Tertiary,
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-                                )
+                                if (latestHistory != null) {
+                                    val savedPct = latestHistory.savedPercentage.coerceAtLeast(0.0)
+                                    Text(
+                                        text = "Saved ${String.format("%.0f", savedPct)}%",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Tertiary,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                    )
+                                } else {
+                                    Text(
+                                        text = "100% Offline",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Tertiary,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                    )
+                                }
                             }
                         }
 
@@ -493,45 +503,58 @@ fun HomeScreen(
 
                             // Details
                             Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = latestHistory?.inputFileName ?: "IMG_2024_FACADE.JPG",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                                Spacer(modifier = Modifier.height(2.dp))
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                ) {
-                                    val origSize = latestHistory?.let { formatBytes(it.originalSize) } ?: "4.8 MB"
-                                    val resSize = latestHistory?.let { formatBytes(it.resultSize) } ?: "1.3 MB"
+                                if (latestHistory != null) {
                                     Text(
-                                        text = origSize,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.outline
-                                    )
-                                    Icon(
-                                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.outline,
-                                        modifier = Modifier.size(12.dp)
-                                    )
-                                    Text(
-                                        text = resSize,
+                                        text = latestHistory.inputFileName,
                                         style = MaterialTheme.typography.labelMedium,
                                         fontWeight = FontWeight.Bold,
-                                        color = Primary
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        Text(
+                                            text = formatBytes(latestHistory.originalSize),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.outline
+                                        )
+                                        Icon(
+                                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.outline,
+                                            modifier = Modifier.size(12.dp)
+                                        )
+                                        Text(
+                                            text = formatBytes(latestHistory.resultSize),
+                                            style = MaterialTheme.typography.labelMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Primary
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = "Optimized for Web & Storage",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                } else {
+                                    Text(
+                                        text = "No photos processed yet",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = "Select a tool above to start compressing or editing photos.",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
-                                Spacer(modifier = Modifier.height(2.dp))
-                                Text(
-                                    text = "Optimized for Web & Storage",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
                             }
 
                             // Share Action Button
@@ -555,8 +578,8 @@ fun HomeScreen(
                                     .background(MaterialTheme.colorScheme.surfaceContainer)
                             ) {
                                 Icon(
-                                    imageVector = Icons.Filled.Share,
-                                    contentDescription = "Share",
+                                    imageVector = if (latestHistory != null) Icons.Filled.Share else Icons.AutoMirrored.Filled.ArrowForward,
+                                    contentDescription = if (latestHistory != null) "Share" else "Start",
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.size(18.dp)
                                 )

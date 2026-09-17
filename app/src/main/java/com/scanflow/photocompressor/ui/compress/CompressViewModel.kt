@@ -146,6 +146,10 @@ class CompressViewModel @Inject constructor(
         }
     }
 
+    fun clearError() {
+        _uiState.update { it.copy(error = null, typedError = null) }
+    }
+
     @Deprecated("Image is automatically saved to Pictures/PhotoCompressor upon completion.")
     fun saveResult() {
         com.scanflow.photocompressor.util.AnalyticsLogger.logEvent(
@@ -175,7 +179,7 @@ class CompressViewModel @Inject constructor(
             else -> state.maxHeight
         }
 
-        val targetSizeBytes = if (state.mode == CompressionMode.TARGET_SIZE) {
+        val rawTargetBytes = if (state.mode == CompressionMode.TARGET_SIZE) {
             if (state.targetSizePreset == TargetSizePreset.CUSTOM) {
                 (state.customTargetSizeKB.toLongOrNull() ?: 500L) * 1024L
             } else {
@@ -183,6 +187,14 @@ class CompressViewModel @Inject constructor(
             }
         } else {
             0L
+        }
+
+        // Target size ceiling protection: compression should never expand file size
+        val originalBytes = state.imageInfo?.fileSize ?: 0L
+        val targetSizeBytes = if (rawTargetBytes > 0L && originalBytes > 0L && rawTargetBytes >= originalBytes) {
+            (originalBytes * 0.95).toLong().coerceAtLeast(10240L)
+        } else {
+            rawTargetBytes
         }
 
         activeJob?.cancel()
@@ -275,13 +287,20 @@ class CompressViewModel @Inject constructor(
 
                     for ((index, uri) in uris.withIndex()) {
                         kotlinx.coroutines.yield()
+                        val imgInfo = runCatching { imageRepository.getImageInfo(uri) }.getOrNull()
+                        val uriOrigBytes = imgInfo?.fileSize ?: 0L
+                        val effectiveTargetForUri = if (rawTargetBytes > 0L && uriOrigBytes > 0L && rawTargetBytes >= uriOrigBytes) {
+                            (uriOrigBytes * 0.95).toLong().coerceAtLeast(10240L)
+                        } else {
+                            rawTargetBytes
+                        }
                         val res = compressImageUseCase(
                             inputUri = uri,
                             quality = effectiveQuality,
                             format = state.format,
                             maxWidth = effectiveMaxWidth,
                             maxHeight = effectiveMaxHeight,
-                            targetSizeBytes = targetSizeBytes,
+                            targetSizeBytes = effectiveTargetForUri,
                             metadataOption = state.metadataOption
                         )
                         res.onSuccess { r ->

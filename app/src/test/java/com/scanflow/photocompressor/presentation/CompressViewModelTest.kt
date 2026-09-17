@@ -137,4 +137,69 @@ class CompressViewModelTest {
         assertEquals(ProcessingState.Cancelled, state.processingState)
         assertEquals(ProcessingError.ProcessingCancelled, state.typedError)
     }
+
+    @Test
+    fun `clearError clears error and typedError`() {
+        viewModel.cancelCompression()
+        assertNotNull(viewModel.uiState.value.typedError)
+        viewModel.clearError()
+        assertNull(viewModel.uiState.value.error)
+        assertNull(viewModel.uiState.value.typedError)
+    }
+
+    @Test
+    fun `compress with target size larger than original image caps target size to never expand file`() = runTest {
+        val mockUri = mockk<android.net.Uri>(relaxed = true)
+        val originalBytes = 600_000L // 0.6 MB
+        val imageInfo = ImageInfo(
+            uri = mockUri,
+            fileName = "1000060463.jpg",
+            fileSize = originalBytes,
+            width = 1215,
+            height = 1600,
+            mimeType = "image/jpeg",
+            format = ImageFormat.JPEG
+        )
+        coEvery { imageRepository.getImageInfo(mockUri) } returns imageInfo
+
+        viewModel.selectImage(mockUri)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // User chooses 1 MB target (larger than 0.6 MB)
+        viewModel.setTargetSizePreset(TargetSizePreset.SIZE_1_MB)
+
+        val targetSizeBytesSlot = slot<Long>()
+        coEvery {
+            compressImageUseCase(
+                inputUri = any(),
+                quality = any(),
+                format = any(),
+                maxWidth = any(),
+                maxHeight = any(),
+                targetSizeBytes = capture(targetSizeBytesSlot),
+                metadataOption = any()
+            )
+        } returns Result.success(
+            CompressionResult(
+                originalSize = originalBytes,
+                compressedSize = 450_000L,
+                outputUri = mockUri,
+                outputFileName = "test.jpg",
+                width = 1215,
+                height = 1600,
+                format = ImageFormat.JPEG,
+                quality = 85,
+                durationMs = 120L
+            )
+        )
+
+        viewModel.compress()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertTrue(
+            "Target size must be capped to not exceed original size (600_000)",
+            targetSizeBytesSlot.captured < originalBytes
+        )
+        assertEquals((originalBytes * 0.95).toLong(), targetSizeBytesSlot.captured)
+    }
 }
