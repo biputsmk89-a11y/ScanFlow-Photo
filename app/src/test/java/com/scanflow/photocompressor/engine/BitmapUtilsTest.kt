@@ -133,4 +133,24 @@ class BitmapUtilsTest {
         val sampledDim = maxRaw / sampleSize
         assertTrue("Sampled dimension must be close to target", sampledDim <= targetDimension * 2)
     }
+
+    @Test
+    fun `openInputStreamSafe returns stream from contentResolver`() {
+        val testUri = mockk<android.net.Uri>()
+        val mockStream = java.io.ByteArrayInputStream(ByteArray(10))
+        io.mockk.every { context.contentResolver.openInputStream(testUri) } returns mockStream
+
+        val stream = bitmapUtils.openInputStreamSafe(testUri)
+        assertNotNull(stream)
+    }
+
+    @Test
+    fun `openInputStreamSafe handles exception gracefully and returns null when no stream or fd`() {
+        val testUri = mockk<android.net.Uri>()
+        io.mockk.every { context.contentResolver.openInputStream(testUri) } throws SecurityException("Denied")
+        io.mockk.every { context.contentResolver.openFileDescriptor(testUri, "r") } returns null
+
+        val stream = bitmapUtils.openInputStreamSafe(testUri)
+        assertNull(stream)
+    }
 }

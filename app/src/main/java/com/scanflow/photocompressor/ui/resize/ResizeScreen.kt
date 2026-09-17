@@ -72,22 +72,22 @@ fun ResizeScreen(
                         Tab(
                             selected = uiState.activeTab == ResizeTab.PRESET,
                             onClick = { viewModel.setActiveTab(ResizeTab.PRESET) },
-                            text = { Text("Presets") }
+                            text = { Text("Presets", maxLines = 1, style = MaterialTheme.typography.labelMedium) }
                         )
                         Tab(
                             selected = uiState.activeTab == ResizeTab.DIMENSIONS,
                             onClick = { viewModel.setActiveTab(ResizeTab.DIMENSIONS) },
-                            text = { Text("Dimensions") }
+                            text = { Text("Exact", maxLines = 1, style = MaterialTheme.typography.labelMedium) }
                         )
                         Tab(
                             selected = uiState.activeTab == ResizeTab.PERCENTAGE,
                             onClick = { viewModel.setActiveTab(ResizeTab.PERCENTAGE) },
-                            text = { Text("Scale %") }
+                            text = { Text("Scale %", maxLines = 1, style = MaterialTheme.typography.labelMedium) }
                         )
                         Tab(
                             selected = uiState.activeTab == ResizeTab.MAX_DIMENSION,
                             onClick = { viewModel.setActiveTab(ResizeTab.MAX_DIMENSION) },
-                            text = { Text("Max Dim") }
+                            text = { Text("Max Dim", maxLines = 1, style = MaterialTheme.typography.labelMedium) }
                         )
                     }
                 }

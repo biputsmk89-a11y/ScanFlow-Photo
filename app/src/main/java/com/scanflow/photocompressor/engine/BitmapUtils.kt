@@ -90,6 +90,24 @@ class BitmapUtils @Inject constructor(
     }
 
     /**
+     * Safely opens an InputStream from a URI with fallback to ParcelFileDescriptor.
+     * Prevents transient URI access failure on modern Android PhotoPicker and OEM ROMs.
+     */
+    fun openInputStreamSafe(uri: Uri): InputStream? {
+        return try {
+            context.contentResolver.openInputStream(uri)
+        } catch (e: Exception) {
+            try {
+                context.contentResolver.openFileDescriptor(uri, "r")?.let { pfd ->
+                    android.os.ParcelFileDescriptor.AutoCloseInputStream(pfd)
+                }
+            } catch (e2: Exception) {
+                null
+            }
+        }
+    }
+
+    /**
      * Get image dimensions without loading the full bitmap.
      * Accounts for EXIF orientation (swapping width and height if rotated 90° or 270°)
      * so that reported dimensions always match the upright visual dimensions.
@@ -98,7 +116,7 @@ class BitmapUtils @Inject constructor(
         val options = BitmapFactory.Options().apply {
             inJustDecodeBounds = true
         }
-        context.contentResolver.openInputStream(uri)?.use { stream ->
+        openInputStreamSafe(uri)?.use { stream ->
             BitmapFactory.decodeStream(stream, null, options)
         }
         val degrees = getExifOrientationDegrees(uri)
@@ -114,7 +132,7 @@ class BitmapUtils @Inject constructor(
      */
     fun getExifOrientationDegrees(uri: Uri): Int {
         return try {
-            context.contentResolver.openInputStream(uri)?.use { stream ->
+            openInputStreamSafe(uri)?.use { stream ->
                 val exif = ExifInterface(stream)
                 when (exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)) {
                     ExifInterface.ORIENTATION_ROTATE_90 -> 90
@@ -142,9 +160,11 @@ class BitmapUtils @Inject constructor(
         val options = BitmapFactory.Options().apply {
             inJustDecodeBounds = true
         }
-        context.contentResolver.openInputStream(uri)?.use { stream ->
+        val boundsStream = openInputStreamSafe(uri)
+            ?: throw IllegalStateException("Could not open stream for URI: $uri")
+        boundsStream.use { stream ->
             BitmapFactory.decodeStream(stream, null, options)
-        } ?: throw IllegalStateException("Could not read image bounds from URI: $uri")
+        }
 
         val rawWidth = options.outWidth
         val rawHeight = options.outHeight
@@ -189,7 +209,7 @@ class BitmapUtils @Inject constructor(
         var decodedBitmap: Bitmap? = null
         while (attempts < 3 && decodedBitmap == null) {
             try {
-                decodedBitmap = context.contentResolver.openInputStream(uri)?.use { stream ->
+                decodedBitmap = openInputStreamSafe(uri)?.use { stream ->
                     BitmapFactory.decodeStream(stream, null, options)
                 }
             } catch (oom: OutOfMemoryError) {
@@ -217,9 +237,11 @@ class BitmapUtils @Inject constructor(
         val options = BitmapFactory.Options().apply {
             inJustDecodeBounds = true
         }
-        context.contentResolver.openInputStream(uri)?.use { stream ->
+        val boundsStream = openInputStreamSafe(uri)
+            ?: throw IllegalStateException("Could not open stream for thumbnail: $uri")
+        boundsStream.use { stream ->
             BitmapFactory.decodeStream(stream, null, options)
-        } ?: throw IllegalStateException("Could not read bounds for thumbnail: $uri")
+        }
 
         val rawWidth = options.outWidth
         val rawHeight = options.outHeight
@@ -238,7 +260,7 @@ class BitmapUtils @Inject constructor(
         options.inSampleSize = sampleSize.coerceAtLeast(1)
         options.inPreferredConfig = Bitmap.Config.RGB_565 // Half memory footprint for thumbnails
 
-        val decoded = context.contentResolver.openInputStream(uri)?.use { stream ->
+        val decoded = openInputStreamSafe(uri)?.use { stream ->
             BitmapFactory.decodeStream(stream, null, options)
         } ?: throw IllegalStateException("Could not decode thumbnail from: $uri")
 
@@ -257,7 +279,7 @@ class BitmapUtils @Inject constructor(
      */
     private fun applyExifRotation(uri: Uri, bitmap: Bitmap): Bitmap {
         try {
-            val inputStream: InputStream = context.contentResolver.openInputStream(uri) ?: return bitmap
+            val inputStream: InputStream = openInputStreamSafe(uri) ?: return bitmap
             val exif = ExifInterface(inputStream)
             inputStream.close()
 

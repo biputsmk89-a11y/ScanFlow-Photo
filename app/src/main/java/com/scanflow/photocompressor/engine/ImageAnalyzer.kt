@@ -35,9 +35,11 @@ class ImageAnalyzer @Inject constructor(
                 inJustDecodeBounds = true
             }
 
-            context.contentResolver.openInputStream(uri)?.use { stream ->
+            val boundsStream = context.contentResolver.openInputStream(uri)
+                ?: throw IllegalArgumentException("Cannot open stream for URI: $uri")
+            boundsStream.use { stream ->
                 BitmapFactory.decodeStream(stream, null, options)
-            } ?: throw IllegalArgumentException("Cannot open stream for URI: $uri")
+            }
 
             val width = options.outWidth
             val height = options.outHeight
