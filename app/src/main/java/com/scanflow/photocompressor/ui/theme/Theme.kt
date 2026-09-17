@@ -1,41 +1,44 @@
 package com.scanflow.photocompressor.ui.theme
 
 import android.app.Activity
-import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
 private val LightColorScheme = lightColorScheme(
     primary = Primary,
-    onPrimary = androidx.compose.ui.graphics.Color.White,
-    primaryContainer = PrimaryContainer,
+    onPrimary = OnPrimary,
+    primaryContainer = PrimaryFixed,
     onPrimaryContainer = PrimaryDark,
     secondary = Secondary,
-    onSecondary = androidx.compose.ui.graphics.Color.White,
+    onSecondary = OnSecondary,
     secondaryContainer = SecondaryContainer,
-    onSecondaryContainer = Secondary,
+    onSecondaryContainer = OnSecondaryContainer,
     tertiary = Tertiary,
-    onTertiary = androidx.compose.ui.graphics.Color.White,
-    tertiaryContainer = TertiaryContainer,
+    onTertiary = OnTertiary,
+    tertiaryContainer = TertiaryContainerLight,
     onTertiaryContainer = Tertiary,
     error = Error,
     errorContainer = ErrorContainer,
-    onError = androidx.compose.ui.graphics.Color.White,
-    onErrorContainer = Error,
+    onError = OnError,
+    onErrorContainer = OnErrorContainer,
     surface = Surface,
     onSurface = OnSurface,
-    surfaceVariant = SurfaceVariant,
+    surfaceVariant = SurfaceContainerLow,
     onSurfaceVariant = OnSurfaceVariant,
     outline = Border,
-    outlineVariant = Border,
+    outlineVariant = OutlineVariant,
     background = Background,
-    onBackground = OnSurface
+    onBackground = OnSurface,
+    surfaceContainerLowest = SurfaceContainerLowest,
+    surfaceContainerLow = SurfaceContainerLow,
+    surfaceContainer = SurfaceContainer,
+    surfaceContainerHigh = SurfaceContainerHigh,
+    surfaceContainerHighest = SurfaceContainerHighest
 )
 
 private val DarkColorScheme = darkColorScheme(
@@ -47,19 +50,20 @@ private val DarkColorScheme = darkColorScheme(
     onSecondary = Secondary,
     secondaryContainer = DarkSecondaryContainer,
     onSecondaryContainer = SecondaryLight,
-    tertiary = Tertiary,
-    onTertiary = androidx.compose.ui.graphics.Color.White,
+    tertiary = SuccessLight,
+    onTertiary = DarkSurface,
     tertiaryContainer = TertiaryContainer,
-    onTertiaryContainer = Tertiary,
+    onTertiaryContainer = TertiaryLight,
     error = Error,
     errorContainer = ErrorContainer,
-    onError = androidx.compose.ui.graphics.Color.White,
-    onErrorContainer = Error,
+    onError = OnError,
+    onErrorContainer = OnErrorContainer,
     surface = DarkSurface,
     onSurface = DarkOnSurface,
     surfaceVariant = DarkSurfaceVariant,
     onSurfaceVariant = DarkOnSurfaceVariant,
     outline = Outline,
+    outlineVariant = DarkSurfaceVariant,
     background = DarkSurface,
     onBackground = DarkOnSurface
 )

@@ -1,41 +1,78 @@
 package com.scanflow.photocompressor.ui.compress
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil.compose.AsyncImage
+import com.scanflow.photocompressor.R
+import com.scanflow.photocompressor.util.ReductionCalculator.formatBytes
 import com.scanflow.photocompressor.domain.model.*
-import com.scanflow.photocompressor.ui.components.*
-import com.scanflow.photocompressor.ui.theme.Success
+import com.scanflow.photocompressor.ui.components.ScanFlowHeader
+import com.scanflow.photocompressor.ui.theme.*
+import com.scanflow.photocompressor.util.AnalyticsEvent
+import com.scanflow.photocompressor.util.AnalyticsLogger
+import com.scanflow.photocompressor.util.ShareHelper
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CompressScreen(
     onNavigateBack: () -> Unit,
     onNavigateToHistory: (() -> Unit)? = null,
-    onNavigateToEdit: ((android.net.Uri) -> Unit)? = null,
-    initialUris: List<android.net.Uri>? = null,
+    onNavigateToEdit: ((Uri) -> Unit)? = null,
+    initialUris: List<Uri>? = null,
     viewModel: CompressViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    var isAdvancedExpanded by remember { mutableStateOf(false) }
+
+    val photoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            viewModel.selectImage(uri)
+        }
+    }
 
     LaunchedEffect(initialUris) {
         if (!initialUris.isNullOrEmpty()) {
@@ -43,650 +80,819 @@ fun CompressScreen(
         }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Compress Photos") },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                actions = {
-                    if (onNavigateToHistory != null && uiState.result == null) {
-                        IconButton(onClick = onNavigateToHistory) {
-                            Icon(Icons.Filled.History, contentDescription = "History")
-                        }
+    val activeResult = uiState.result
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
+        // Sticky Header (Google Stitch)
+        ScanFlowHeader(
+            title = if (activeResult != null) "Comparison Preview" else "Compress Editor",
+            subtitle = "ScanFlow Foto",
+            onNavigateBack = {
+                if (activeResult != null) {
+                    viewModel.reset()
+                } else {
+                    onNavigateBack()
+                }
+            },
+            actions = {
+                if (activeResult != null && onNavigateToHistory != null) {
+                    IconButton(onClick = onNavigateToHistory) {
+                        Icon(
+                            imageVector = Icons.Filled.History,
+                            contentDescription = "History",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
-            )
-        }
-    ) { padding ->
-        Box(modifier = Modifier.fillMaxSize()) {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                // Check if we are displaying RESULT SCREEN (Rule 38)
-                val activeResult = uiState.result
-                if (activeResult != null) {
-                    val result = activeResult
+                Box(
+                    modifier = Modifier
+                        .size(32.dp)
+                        .clip(CircleShape)
+                        .background(Primary),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Person,
+                        contentDescription = "Profile",
+                        tint = Color.White,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
+        )
 
-                    // 1. Result Header: Compression Complete
+        if (activeResult != null) {
+            // ==========================================
+            // RESULT SCREEN: Comparison Preview (Stitch)
+            // ==========================================
+            StitchCompressResultContent(
+                result = activeResult,
+                uiState = uiState,
+                onHomeClick = onNavigateBack,
+                onResetClick = { viewModel.reset() },
+                onShareClick = {
+                    AnalyticsLogger.logEvent(
+                        AnalyticsEvent.SHARE_CLICKED,
+                        mapOf("count" to if (uiState.outputUris.size > 1) uiState.outputUris.size else 1)
+                    )
+                    val outputUris = uiState.outputUris
+                    if (outputUris.size > 1) {
+                        ShareHelper.shareImages(
+                            context = context,
+                            uris = outputUris,
+                            mimeType = "image/*",
+                            title = "Share Compressed Photos"
+                        )
+                    } else {
+                        ShareHelper.shareImage(
+                            context = context,
+                            uri = activeResult.outputUri,
+                            mimeType = activeResult.format.mimeType,
+                            title = "Share Compressed Photo"
+                        )
+                    }
+                },
+                onOpenClick = {
+                    try {
+                        val intent = Intent(Intent.ACTION_VIEW).apply {
+                            setDataAndType(activeResult.outputUri, activeResult.format.mimeType.ifEmpty { "image/*" })
+                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        }
+                        context.startActivity(intent)
+                    } catch (e: Exception) {
+                        Toast.makeText(context, "No gallery app found", Toast.LENGTH_SHORT).show()
+                    }
+                },
+                onEditClick = onNavigateToEdit?.let { edit -> { edit(activeResult.outputUri) } }
+            )
+        } else {
+            // ==========================================
+            // EDITOR SCREEN: Compress & Target Size (Stitch)
+            // ==========================================
+            Box(modifier = Modifier.fillMaxSize()) {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(bottom = 80.dp),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    // Top Context Indicator
+                    item {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Surface(
+                                shape = RoundedCornerShape(9999.dp),
+                                color = MaterialTheme.colorScheme.secondaryContainer
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Filled.PhotoLibrary,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                    Text(
+                                        text = if (uiState.selectedCount > 0) "${uiState.selectedCount} photo selected" else "1 photo ready",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                                    )
+                                }
+                            }
+
+                            Surface(
+                                shape = RoundedCornerShape(9999.dp),
+                                color = MaterialTheme.colorScheme.surfaceContainer
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Filled.OfflinePin,
+                                        contentDescription = null,
+                                        tint = Tertiary,
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                    Text(
+                                        text = "100% Offline",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Tertiary
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // Image Preview Card with Overlay Pills
+                    item {
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(16.dp))
+                                .clickable {
+                                    photoPickerLauncher.launch(
+                                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                                    )
+                                },
+                            shape = RoundedCornerShape(16.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceContainerLowest
+                            ),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+                        ) {
+                            Column {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .aspectRatio(4f / 3f)
+                                        .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                                ) {
+                                    if (uiState.selectedImageUri != null) {
+                                        AsyncImage(
+                                            model = uiState.selectedImageUri,
+                                            contentDescription = "Selected photo",
+                                            contentScale = ContentScale.Crop,
+                                            modifier = Modifier.fillMaxSize()
+                                        )
+                                    } else {
+                                        Column(
+                                            modifier = Modifier.fillMaxSize(),
+                                            verticalArrangement = Arrangement.Center,
+                                            horizontalAlignment = Alignment.CenterHorizontally
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Filled.AddPhotoAlternate,
+                                                contentDescription = "Pick photo",
+                                                tint = Primary,
+                                                modifier = Modifier.size(48.dp)
+                                            )
+                                            Spacer(modifier = Modifier.height(8.dp))
+                                            Text(
+                                                text = "Tap to choose a photo",
+                                                style = MaterialTheme.typography.labelMedium,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                    }
+
+                                    // Dynamic Size Delta Pill on Preview
+                                    Row(
+                                        modifier = Modifier
+                                            .align(Alignment.BottomCenter)
+                                            .fillMaxWidth()
+                                            .padding(12.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Surface(
+                                            shape = RoundedCornerShape(9999.dp),
+                                            color = InverseSurface.copy(alpha = 0.85f)
+                                        ) {
+                                            Row(
+                                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Filled.ArrowDownward,
+                                                    contentDescription = null,
+                                                    tint = TertiaryFixed,
+                                                    modifier = Modifier.size(16.dp)
+                                                )
+                                                Text(
+                                                    text = "Target: ${uiState.targetSizePreset.label}",
+                                                    style = MaterialTheme.typography.labelMedium,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = TertiaryFixed
+                                                )
+                                            }
+                                        }
+
+                                        val resText = uiState.imageInfo?.resolution ?: "4032 × 3024"
+                                        Surface(
+                                            shape = RoundedCornerShape(9999.dp),
+                                            color = InverseSurface.copy(alpha = 0.85f)
+                                        ) {
+                                            Row(
+                                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Filled.AspectRatio,
+                                                    contentDescription = null,
+                                                    tint = InverseOnSurface,
+                                                    modifier = Modifier.size(14.dp)
+                                                )
+                                                Text(
+                                                    text = resText,
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = InverseOnSurface
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+
+                                // Metadata bar below image
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(14.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                        ) {
+                                            Text(
+                                                text = uiState.imageInfo?.fileName ?: "IMG_2034.jpg",
+                                                style = MaterialTheme.typography.titleSmall,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.onSurface,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                            Icon(
+                                                imageVector = Icons.Filled.Verified,
+                                                contentDescription = null,
+                                                tint = MaterialTheme.colorScheme.outline,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                        }
+                                        Text(
+                                            text = "Original uncompressed capture",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+
+                                    Surface(
+                                        shape = RoundedCornerShape(8.dp),
+                                        color = MaterialTheme.colorScheme.surfaceContainer
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                        ) {
+                                            Text(
+                                                text = "Original",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                            val origSizeMB = uiState.imageInfo?.fileSizeMB ?: 8.4
+                                            Text(
+                                                text = "${String.format("%.1f", origSizeMB)} MB",
+                                                style = MaterialTheme.typography.labelLarge,
+                                                fontWeight = FontWeight.Bold,
+                                                color = Primary
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Section 1: Optimization Profile (3 Stitch Cards in a row)
+                    item {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "OPTIMIZATION PROFILE",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    letterSpacing = 1.sp,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "Pick fidelity balance",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                val isSmall = uiState.mode == CompressionMode.QUICK && uiState.quickPreset == QuickPreset.SMALL
+                                val isBalanced = uiState.mode == CompressionMode.QUICK && uiState.quickPreset == QuickPreset.BALANCED
+                                val isHigh = uiState.mode == CompressionMode.QUICK && uiState.quickPreset == QuickPreset.HIGH_QUALITY
+
+                                StitchProfileCard(
+                                    title = "Small",
+                                    subtitle = "Quick send",
+                                    tag = "~300 KB",
+                                    icon = Icons.Filled.Compress,
+                                    isSelected = isSmall,
+                                    onClick = { viewModel.setQuickPreset(QuickPreset.SMALL) },
+                                    modifier = Modifier.weight(1f)
+                                )
+
+                                StitchProfileCard(
+                                    title = "Balanced",
+                                    subtitle = "Best clarity",
+                                    tag = "Recommended",
+                                    icon = Icons.Filled.Tune,
+                                    isSelected = isBalanced,
+                                    onClick = { viewModel.setQuickPreset(QuickPreset.BALANCED) },
+                                    modifier = Modifier.weight(1f)
+                                )
+
+                                StitchProfileCard(
+                                    title = "Fidelity",
+                                    subtitle = "Fine details",
+                                    tag = "~1.5 MB",
+                                    icon = Icons.Filled.HighQuality,
+                                    isSelected = isHigh,
+                                    onClick = { viewModel.setQuickPreset(QuickPreset.HIGH_QUALITY) },
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                        }
+                    }
+
+                    // Section 2: Target File Size Chips
+                    item {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "TARGET FILE SIZE",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    letterSpacing = 1.sp,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Filled.AutoFixHigh,
+                                        contentDescription = null,
+                                        tint = Tertiary,
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                    Text(
+                                        text = "High Reduction",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Tertiary
+                                    )
+                                }
+                            }
+
+                            LazyRow(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                val presets = listOf(
+                                    TargetSizePreset.SIZE_100_KB,
+                                    TargetSizePreset.SIZE_250_KB,
+                                    TargetSizePreset.SIZE_500_KB,
+                                    TargetSizePreset.SIZE_1_MB,
+                                    TargetSizePreset.SIZE_2_MB,
+                                    TargetSizePreset.CUSTOM
+                                )
+                                items(presets) { preset ->
+                                    val isSelected = uiState.targetSizePreset == preset && uiState.mode == CompressionMode.TARGET_SIZE
+                                    Surface(
+                                        shape = RoundedCornerShape(12.dp),
+                                        color = if (isSelected) Primary else MaterialTheme.colorScheme.surfaceContainerLowest,
+                                        border = BorderStroke(
+                                            1.dp,
+                                            if (isSelected) Primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+                                        ),
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(12.dp))
+                                            .clickable {
+                                                viewModel.setMode(CompressionMode.TARGET_SIZE)
+                                                viewModel.setTargetSizePreset(preset)
+                                            }
+                                    ) {
+                                        Text(
+                                            text = preset.label,
+                                            style = MaterialTheme.typography.labelMedium,
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                            color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface,
+                                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp)
+                                        )
+                                    }
+                                }
+                            }
+
+                            if (uiState.targetSizePreset == TargetSizePreset.CUSTOM && uiState.mode == CompressionMode.TARGET_SIZE) {
+                                OutlinedTextField(
+                                    value = uiState.customTargetSizeKB,
+                                    onValueChange = { viewModel.setCustomTargetSizeKB(it) },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    placeholder = { Text("Target size in KB (e.g. 600)") },
+                                    shape = RoundedCornerShape(12.dp),
+                                    singleLine = true,
+                                    trailingIcon = { Text("KB", modifier = Modifier.padding(end = 12.dp), fontWeight = FontWeight.Bold) }
+                                )
+                            }
+                        }
+                    }
+
+                    // Section 3: Advanced Controls Accordion
                     item {
                         Card(
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(16.dp),
                             colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.surface
+                                containerColor = MaterialTheme.colorScheme.surfaceContainerLowest
                             ),
-                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
                         ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(16.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
-                            ) {
-                                Surface(
-                                    shape = RoundedCornerShape(12.dp),
-                                    color = Success.copy(alpha = 0.15f),
-                                    modifier = Modifier.size(44.dp)
-                                ) {
-                                    Box(contentAlignment = Alignment.Center) {
-                                        Icon(
-                                            Icons.Filled.CheckCircle,
-                                            contentDescription = null,
-                                            tint = Success,
-                                            modifier = Modifier.size(26.dp)
-                                        )
-                                    }
-                                }
-                                Column {
-                                    Text(
-                                        text = "Compression Complete",
-                                        style = MaterialTheme.typography.titleLarge,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                    Text(
-                                        text = if (uiState.isMultiple) "${uiState.selectedCount} photos compressed" else "Photo successfully compressed",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    // 2. Metrics 2x2 Grid (Original, New Size, Saved, Reduction)
-                    item {
-                        Column(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(10.dp)
-                            ) {
-                                MetricCard(
-                                    label = "Original",
-                                    value = formatBytes(result.originalSize),
-                                    modifier = Modifier.weight(1f)
-                                )
-                                MetricCard(
-                                    label = "New Size",
-                                    value = formatBytes(result.compressedSize),
-                                    modifier = Modifier.weight(1f),
-                                    highlight = true
-                                )
-                            }
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(10.dp)
-                            ) {
-                                MetricCard(
-                                    label = "Saved",
-                                    value = formatBytes(result.savedBytes),
-                                    modifier = Modifier.weight(1f),
-                                    valueColor = Success
-                                )
-                                MetricCard(
-                                    label = "Reduction",
-                                    value = "${String.format("%.1f", result.savedPercentage)}%",
-                                    modifier = Modifier.weight(1f),
-                                    valueColor = Success
-                                )
-                            }
-                        }
-                    }
-
-                    // 3. Before/After visual preview for single photo
-                    if (!uiState.isMultiple && uiState.selectedImageUri != null) {
-                        item {
-                            BeforeAfterPreview(
-                                originalUri = uiState.selectedImageUri,
-                                resultUri = result.outputUri,
-                                originalSize = formatBytes(result.originalSize),
-                                resultSize = formatBytes(result.compressedSize),
-                                savedPercentage = String.format("%.1f%%", result.savedPercentage)
-                            )
-                        }
-                    }
-
-                    // 4. Result Actions (1 Primary + Secondary Actions)
-                    item {
-                        Column(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            // Auto-save notification badge
-                            Surface(
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(12.dp),
-                                color = Success.copy(alpha = 0.12f),
-                                border = BorderStroke(1.dp, Success.copy(alpha = 0.3f))
-                            ) {
+                            Column(modifier = Modifier.fillMaxWidth()) {
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(horizontal = 14.dp, vertical = 10.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                        .clickable { isAdvancedExpanded = !isAdvancedExpanded }
+                                        .padding(14.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Icon(
-                                        imageVector = Icons.Filled.CheckCircle,
-                                        contentDescription = null,
-                                        tint = Success,
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                    Column {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                    ) {
+                                        Surface(
+                                            shape = RoundedCornerShape(8.dp),
+                                            color = MaterialTheme.colorScheme.surfaceContainer,
+                                            modifier = Modifier.size(32.dp)
+                                        ) {
+                                            Box(contentAlignment = Alignment.Center) {
+                                                Icon(
+                                                    imageVector = Icons.Filled.Tune,
+                                                    contentDescription = null,
+                                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                    modifier = Modifier.size(18.dp)
+                                                )
+                                            }
+                                        }
                                         Text(
-                                            text = "Auto-saved to device",
-                                            style = MaterialTheme.typography.labelMedium,
-                                            fontWeight = FontWeight.Bold,
+                                            text = "Advanced Controls",
+                                            style = MaterialTheme.typography.labelLarge,
+                                            fontWeight = FontWeight.SemiBold,
                                             color = MaterialTheme.colorScheme.onSurface
                                         )
+                                    }
+
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
                                         Text(
-                                            text = "Location: Pictures/PhotoCompressor",
+                                            text = "${uiState.format.name} • ${uiState.quality}%",
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
-                                    }
-                                }
-                            }
-
-                            // Primary Action: OPEN IN GALLERY
-                            Button(
-                                onClick = {
-                                    try {
-                                        val intent = Intent(Intent.ACTION_VIEW).apply {
-                                            setDataAndType(result.outputUri, result.format.mimeType.ifEmpty { "image/*" })
-                                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                        }
-                                        context.startActivity(intent)
-                                    } catch (e: Exception) {
-                                        Toast.makeText(context, "No gallery app found to open photo", Toast.LENGTH_SHORT).show()
-                                    }
-                                },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(52.dp),
-                                shape = RoundedCornerShape(14.dp),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = MaterialTheme.colorScheme.primary
-                                )
-                            ) {
-                                Icon(Icons.Filled.Visibility, contentDescription = null, modifier = Modifier.size(20.dp))
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = "OPEN IN GALLERY",
-                                    fontWeight = FontWeight.Bold,
-                                    style = MaterialTheme.typography.labelLarge
-                                )
-                            }
-
-                            // Secondary Action: SHARE
-                            OutlinedButton(
-                                onClick = {
-                                    com.scanflow.photocompressor.util.AnalyticsLogger.logEvent(
-                                        com.scanflow.photocompressor.util.AnalyticsEvent.SHARE_CLICKED,
-                                        mapOf("count" to if (uiState.outputUris.size > 1) uiState.outputUris.size else 1)
-                                    )
-                                    val outputUris = uiState.outputUris
-                                    if (outputUris.size > 1) {
-                                        com.scanflow.photocompressor.util.ShareHelper.shareImages(
-                                            context = context,
-                                            uris = outputUris,
-                                            mimeType = "image/*",
-                                            title = "Share Compressed Photos"
-                                        )
-                                    } else {
-                                        com.scanflow.photocompressor.util.ShareHelper.shareImage(
-                                            context = context,
-                                            uri = result.outputUri,
-                                            mimeType = result.format.mimeType,
-                                            title = "Share Compressed Photo"
+                                        Icon(
+                                            imageVector = if (isAdvancedExpanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.outline
                                         )
                                     }
-                                },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(48.dp),
-                                shape = RoundedCornerShape(14.dp)
-                            ) {
-                                Icon(Icons.Filled.Share, contentDescription = null, modifier = Modifier.size(18.dp))
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(if (uiState.outputUris.size > 1) "SHARE (${uiState.outputUris.size} PHOTOS)" else "SHARE")
-                            }
-
-                            // Secondary Action: COMPRESS AGAIN
-                            OutlinedButton(
-                                onClick = { viewModel.reset() },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(48.dp),
-                                shape = RoundedCornerShape(14.dp)
-                            ) {
-                                Icon(Icons.Filled.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text("COMPRESS AGAIN")
-                            }
-
-                            // Secondary Action: EDIT
-                            if (onNavigateToEdit != null) {
-                                OutlinedButton(
-                                    onClick = { onNavigateToEdit(result.outputUri) },
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(48.dp),
-                                    shape = RoundedCornerShape(14.dp)
-                                ) {
-                                    Icon(Icons.Filled.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text("EDIT")
                                 }
-                            }
-                        }
-                    }
-                } else {
-                    // CONFIGURATION SCREEN
 
-                    // 1. [ Select Photos ] Card
-                    item {
-                        ImagePickerCard(
-                            selectedImageUri = uiState.selectedImageUri,
-                            onImageSelected = { viewModel.selectImage(it) },
-                            allowMultiple = true,
-                            onMultipleImagesSelected = { viewModel.selectImages(it) }
-                        )
-                    }
-
-                    // 2. Selected Count Banner
-                    if (uiState.selectedCount > 0) {
-                        item {
-                            Surface(
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(12.dp),
-                                color = MaterialTheme.colorScheme.surface,
-                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
-                            ) {
-                                Column(modifier = Modifier.padding(14.dp)) {
-                                    Text(
-                                        text = "Selected:",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        fontWeight = FontWeight.Medium
-                                    )
-                                    Spacer(modifier = Modifier.height(2.dp))
-                                    Text(
-                                        text = if (uiState.selectedCount > 1) {
-                                            "${uiState.selectedCount} photos"
-                                        } else {
-                                            uiState.imageInfo?.let {
-                                                "1 photo • ${it.fileName} (${it.resolution}, ${String.format("%.1f", it.fileSizeMB)} MB)"
-                                            } ?: "1 photo"
-                                        },
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    // 3. Mode Selection
-                    item {
-                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text(
-                                text = "Mode",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
-                            )
-
-                            // Option: Small
-                            val isSmall = uiState.mode == CompressionMode.QUICK && uiState.quickPreset == QuickPreset.SMALL
-                            ModeOptionCard(
-                                title = "Small",
-                                subtitle = "Maximum compression for quick sharing (~60% quality)",
-                                isSelected = isSmall,
-                                onClick = { viewModel.setQuickPreset(QuickPreset.SMALL) }
-                            )
-
-                            // Option: Balanced (Default)
-                            val isBalanced = uiState.mode == CompressionMode.QUICK && uiState.quickPreset == QuickPreset.BALANCED
-                            ModeOptionCard(
-                                title = "Balanced",
-                                subtitle = "Best balance of clarity & reduced size (~75% quality)",
-                                isSelected = isBalanced,
-                                isDefault = true,
-                                onClick = { viewModel.setQuickPreset(QuickPreset.BALANCED) }
-                            )
-
-                            // Option: High Quality
-                            val isHighQuality = uiState.mode == CompressionMode.QUICK && uiState.quickPreset == QuickPreset.HIGH_QUALITY
-                            ModeOptionCard(
-                                title = "High Quality",
-                                subtitle = "Minimal compression preserving maximum details (~85% quality)",
-                                isSelected = isHighQuality,
-                                onClick = { viewModel.setQuickPreset(QuickPreset.HIGH_QUALITY) }
-                            )
-
-                            // Option: Target Size
-                            val isTargetSize = uiState.mode == CompressionMode.TARGET_SIZE
-                            ModeOptionCard(
-                                title = "Target Size",
-                                subtitle = "Compress strictly below a specified file size",
-                                isSelected = isTargetSize,
-                                onClick = { viewModel.setMode(CompressionMode.TARGET_SIZE) }
-                            )
-
-                            // Sub-settings for Target Size
-                            if (isTargetSize) {
-                                Surface(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    shape = RoundedCornerShape(10.dp),
-                                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                                ) {
+                                AnimatedVisibility(visible = isAdvancedExpanded) {
                                     Column(
-                                        modifier = Modifier.padding(12.dp),
-                                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 14.dp, vertical = 8.dp),
+                                        verticalArrangement = Arrangement.spacedBy(14.dp)
                                     ) {
-                                        Text(
-                                            text = "Choose target limit:",
-                                            style = MaterialTheme.typography.labelMedium,
-                                            fontWeight = FontWeight.SemiBold
-                                        )
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                        ) {
-                                            listOf(
-                                                TargetSizePreset.SIZE_100_KB,
-                                                TargetSizePreset.SIZE_250_KB,
-                                                TargetSizePreset.SIZE_500_KB,
-                                                TargetSizePreset.SIZE_1_MB
-                                            ).forEach { preset ->
-                                                FilterChip(
-                                                    selected = uiState.targetSizePreset == preset,
-                                                    onClick = { viewModel.setTargetSizePreset(preset) },
-                                                    label = { Text(preset.label) },
-                                                    modifier = Modifier.weight(1f)
-                                                )
-                                            }
-                                        }
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                        ) {
-                                            listOf(
-                                                TargetSizePreset.SIZE_2_MB,
-                                                TargetSizePreset.SIZE_5_MB,
-                                                TargetSizePreset.CUSTOM
-                                            ).forEach { preset ->
-                                                FilterChip(
-                                                    selected = uiState.targetSizePreset == preset,
-                                                    onClick = { viewModel.setTargetSizePreset(preset) },
-                                                    label = { Text(preset.label) },
-                                                    modifier = Modifier.weight(1f)
-                                                )
-                                            }
-                                        }
-                                        if (uiState.targetSizePreset == TargetSizePreset.CUSTOM) {
-                                            OutlinedTextField(
-                                                value = uiState.customTargetSizeKB,
-                                                onValueChange = { viewModel.setCustomTargetSizeKB(it) },
+                                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f))
+
+                                        // Format Selector
+                                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                            Text(
+                                                text = "Target File Format",
+                                                style = MaterialTheme.typography.labelMedium,
+                                                fontWeight = FontWeight.SemiBold,
+                                                color = MaterialTheme.colorScheme.onSurface
+                                            )
+                                            Row(
                                                 modifier = Modifier.fillMaxWidth(),
-                                                placeholder = { Text("Enter size in KB (e.g. 750)") },
-                                                singleLine = true,
-                                                trailingIcon = { Text("KB", modifier = Modifier.padding(end = 12.dp)) }
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    // 4. Advanced (Progressive Disclosure)
-                    item {
-                        AdvancedSettingsCard(
-                            title = "Advanced",
-                            summary = "${uiState.format.name} • ${if (uiState.maxWidth > 0) "${uiState.maxWidth}px" else "Original Size"} • ${uiState.metadataOption.label}"
-                        ) {
-                            // Sub 1: Format
-                            Column {
-                                Text(
-                                    text = "Format",
-                                    style = MaterialTheme.typography.titleSmall,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    ImageFormat.values().forEach { format ->
-                                        FilterChip(
-                                            selected = uiState.format == format,
-                                            onClick = { viewModel.setFormat(format) },
-                                            label = { Text(format.name) },
-                                            modifier = Modifier.weight(1f)
-                                        )
-                                    }
-                                }
-                            }
-
-                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-
-                            // Sub 2: Resize Constraints
-                            Column {
-                                Text(
-                                    text = "Resize Constraint",
-                                    style = MaterialTheme.typography.titleSmall,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                                Spacer(modifier = Modifier.height(8.dp))
-                                val resizeOptions = listOf(
-                                    Pair("Original", 0),
-                                    Pair("1080p", 1920),
-                                    Pair("2K", 2560),
-                                    Pair("4K", 3840)
-                                )
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    resizeOptions.forEach { (label, dim) ->
-                                        FilterChip(
-                                            selected = uiState.maxWidth == dim,
-                                            onClick = { viewModel.setMaxDimensions(dim, dim) },
-                                            label = { Text(label) },
-                                            modifier = Modifier.weight(1f)
-                                        )
-                                    }
-                                }
-                            }
-
-                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-
-                            // Sub 3: Metadata
-                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Text(
-                                    text = "Metadata & Privacy",
-                                    style = MaterialTheme.typography.titleSmall,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                                MetadataOption.values().forEach { option ->
-                                    val isSelected = uiState.metadataOption == option
-                                    OutlinedCard(
-                                        onClick = { viewModel.setMetadataOption(option) },
-                                        modifier = Modifier.fillMaxWidth(),
-                                        shape = RoundedCornerShape(10.dp),
-                                        colors = CardDefaults.outlinedCardColors(
-                                            containerColor = if (isSelected) {
-                                                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
-                                            } else {
-                                                MaterialTheme.colorScheme.surface
+                                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                            ) {
+                                                listOf(ImageFormat.JPEG, ImageFormat.WEBP, ImageFormat.PNG).forEach { fmt ->
+                                                    val isSelected = uiState.format == fmt
+                                                    Surface(
+                                                        shape = RoundedCornerShape(10.dp),
+                                                        color = if (isSelected) MaterialTheme.colorScheme.surfaceContainerLowest else MaterialTheme.colorScheme.surfaceContainerLow,
+                                                        border = BorderStroke(
+                                                            1.dp,
+                                                            if (isSelected) Primary else Color.Transparent
+                                                        ),
+                                                        modifier = Modifier
+                                                            .weight(1f)
+                                                            .clip(RoundedCornerShape(10.dp))
+                                                            .clickable { viewModel.setFormat(fmt) }
+                                                    ) {
+                                                        Text(
+                                                            text = fmt.name,
+                                                            style = MaterialTheme.typography.labelMedium,
+                                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                                            color = if (isSelected) Primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                                            modifier = Modifier.padding(vertical = 10.dp),
+                                                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                                        )
+                                                    }
+                                                }
                                             }
-                                        ),
-                                        border = CardDefaults.outlinedCardBorder().copy(
-                                            brush = androidx.compose.ui.graphics.SolidColor(
-                                                if (isSelected) MaterialTheme.colorScheme.primary
-                                                else MaterialTheme.colorScheme.outlineVariant
-                                            )
-                                        )
-                                    ) {
+                                        }
+
+                                        // Preserve EXIF Switch
                                         Row(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(horizontal = 12.dp, vertical = 8.dp),
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
                                             verticalAlignment = Alignment.CenterVertically
                                         ) {
-                                            RadioButton(
-                                                selected = isSelected,
-                                                onClick = { viewModel.setMetadataOption(option) }
-                                            )
-                                            Spacer(modifier = Modifier.width(8.dp))
-                                            Column {
+                                            Column(modifier = Modifier.weight(1f)) {
                                                 Text(
-                                                    text = option.label,
-                                                    style = MaterialTheme.typography.bodyMedium,
-                                                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
+                                                    text = "Preserve EXIF Metadata",
+                                                    style = MaterialTheme.typography.labelMedium,
+                                                    fontWeight = FontWeight.SemiBold,
+                                                    color = MaterialTheme.colorScheme.onSurface
                                                 )
                                                 Text(
-                                                    text = option.description,
+                                                    text = "Retain camera, geolocation GPS & timestamp",
                                                     style = MaterialTheme.typography.bodySmall,
                                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                                 )
                                             }
+                                            val preserveExif = uiState.metadataOption != MetadataOption.REMOVE_ALL
+                                            Switch(
+                                                checked = preserveExif,
+                                                onCheckedChange = { preserve ->
+                                                    viewModel.setMetadataOption(
+                                                        if (preserve) MetadataOption.KEEP_METADATA else MetadataOption.REMOVE_ALL
+                                                    )
+                                                },
+                                                colors = SwitchDefaults.colors(
+                                                    checkedThumbColor = Color.White,
+                                                    checkedTrackColor = Primary
+                                                )
+                                            )
                                         }
+
+                                        // Quality Percentage Slider
+                                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.SpaceBetween
+                                            ) {
+                                                Text(
+                                                    text = "Compression Quality Cap",
+                                                    style = MaterialTheme.typography.labelMedium,
+                                                    fontWeight = FontWeight.SemiBold,
+                                                    color = MaterialTheme.colorScheme.onSurface
+                                                )
+                                                Text(
+                                                    text = "${uiState.quality}%",
+                                                    style = MaterialTheme.typography.labelMedium,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = Primary
+                                                )
+                                            }
+                                            Slider(
+                                                value = uiState.quality.toFloat(),
+                                                onValueChange = { viewModel.setQuality(it.toInt()) },
+                                                valueRange = 40f..95f,
+                                                colors = SliderDefaults.colors(
+                                                    thumbColor = Primary,
+                                                    activeTrackColor = Primary
+                                                )
+                                            )
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.SpaceBetween
+                                            ) {
+                                                Text("Heavy (40%)", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
+                                                Text("Balanced (80%)", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
+                                                Text("Lossless-like (95%)", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
+                                            }
+                                        }
+                                        Spacer(modifier = Modifier.height(4.dp))
                                     }
                                 }
                             }
                         }
                     }
 
-                    // 5. 1 Primary Action: [ COMPRESS X PHOTOS ]
+                    // Space Savings Preview Banner
                     item {
-                        val buttonText = when {
-                            uiState.selectedCount > 1 -> "COMPRESS ${uiState.selectedCount} PHOTOS"
-                            uiState.selectedCount == 1 -> "COMPRESS PHOTO"
-                            else -> "COMPRESS PHOTOS"
-                        }
-                        val semanticDescription = when {
-                            uiState.selectedCount > 1 -> "Compress ${uiState.selectedCount} selected photos"
-                            uiState.selectedCount == 1 -> "Compress selected photo"
-                            else -> "Compress selected photos"
-                        }
-
-                        Button(
-                            onClick = { viewModel.compress() },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .heightIn(min = 52.dp)
-                                .semantics {
-                                    contentDescription = semanticDescription
-                                },
-                            enabled = uiState.selectedCount > 0 && !uiState.isProcessing,
+                        Surface(
                             shape = RoundedCornerShape(14.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.primary
-                            )
+                            color = MaterialTheme.colorScheme.secondaryContainer
                         ) {
-                            Icon(
-                                Icons.Filled.Compress,
-                                contentDescription = null,
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = buttonText,
-                                style = MaterialTheme.typography.labelLarge,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    }
-
-                    // Error message (Rule 53: Error UX without stack traces)
-                    uiState.userErrorMessage?.let { errorMsg ->
-                        item {
-                            Card(
-                                modifier = Modifier.fillMaxWidth(),
-                                colors = CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.errorContainer
-                                ),
-                                shape = RoundedCornerShape(12.dp)
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(14.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
                             ) {
                                 Row(
-                                    modifier = Modifier.padding(14.dp),
-                                    verticalAlignment = Alignment.CenterVertically
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                                 ) {
-                                    Icon(
-                                        Icons.Filled.Warning,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.error,
-                                        modifier = Modifier.size(24.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(12.dp))
-                                    Text(
-                                        text = errorMsg,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onErrorContainer
-                                    )
+                                    Surface(
+                                        shape = CircleShape,
+                                        color = Primary,
+                                        modifier = Modifier.size(38.dp)
+                                    ) {
+                                        Box(contentAlignment = Alignment.Center) {
+                                            Icon(
+                                                imageVector = Icons.Filled.SaveAlt,
+                                                contentDescription = null,
+                                                tint = Color.White,
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                        }
+                                    }
+                                    Column {
+                                        Text(
+                                            text = "Saving ~7.9 MB space",
+                                            style = MaterialTheme.typography.labelLarge,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                        Text(
+                                            text = "Ideal for email sharing and messaging apps",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSecondaryContainer
+                                        )
+                                    }
                                 }
+                                Icon(
+                                    imageVector = Icons.Filled.Verified,
+                                    contentDescription = null,
+                                    tint = Primary,
+                                    modifier = Modifier.size(22.dp)
+                                )
                             }
                         }
                     }
                 }
 
-                item { Spacer(modifier = Modifier.height(16.dp)) }
-            }
+                // Sticky Bottom Bar: Shutter Primary Action
+                Surface(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth(),
+                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
+                    tonalElevation = 4.dp
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 10.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Button(
+                            onClick = {
+                                if (uiState.selectedImageUri != null) {
+                                    viewModel.compress()
+                                } else {
+                                    photoPickerLauncher.launch(
+                                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                                    )
+                                }
+                            },
+                            enabled = !uiState.isProcessing,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(52.dp),
+                            shape = RoundedCornerShape(14.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Primary,
+                                contentColor = Color.White
+                            ),
+                            elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
+                        ) {
+                            if (uiState.isProcessing) {
+                                CircularProgressIndicator(
+                                    color = Color.White,
+                                    strokeWidth = 2.dp,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "Compressing...",
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Filled.Bolt,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                val ctaText = if (uiState.selectedImageUri != null) {
+                                    "Compress Photo • ${uiState.targetSizePreset.label}"
+                                } else {
+                                    "Select Photo to Compress"
+                                }
+                                Text(
+                                    text = ctaText,
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
 
-            // Processing Overlay adhering to Rule 37
-            if (uiState.isProcessing) {
-                if (uiState.isMultiple) {
-                    ProcessingOverlay(
-                        isVisible = true,
-                        progress = uiState.currentProgress,
-                        message = "Processing",
-                        progressText = "${uiState.processedCount} / ${uiState.totalToProcess}",
-                        cancelLabel = "Cancel",
-                        onCancel = { viewModel.cancelCompression() }
-                    )
-                } else {
-                    ProcessingOverlay(
-                        isVisible = true,
-                        progress = uiState.currentProgress,
-                        message = "Compressing...",
-                        progressText = "${(uiState.currentProgress.coerceIn(0f, 1f) * 100).toInt()}%",
-                        cancelLabel = "Cancel",
-                        onCancel = { viewModel.cancelCompression() }
-                    )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(6.dp)
+                                    .clip(CircleShape)
+                                    .background(Tertiary)
+                            )
+                            Text(
+                                text = "Local Android Canvas Engine • Instant Process",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -694,105 +900,683 @@ fun CompressScreen(
 }
 
 /**
- * Metric Card for Rule 38 Result Screen
+ * 3-Column Preset Mode Card (Stitch)
  */
 @Composable
-private fun MetricCard(
-    label: String,
-    value: String,
-    modifier: Modifier = Modifier,
-    highlight: Boolean = false,
-    valueColor: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.onSurface
-) {
-    Surface(
-        modifier = modifier,
-        shape = RoundedCornerShape(12.dp),
-        color = if (highlight) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f) else MaterialTheme.colorScheme.surface,
-        border = BorderStroke(
-            1.dp,
-            if (highlight) MaterialTheme.colorScheme.primary.copy(alpha = 0.5f) else MaterialTheme.colorScheme.outlineVariant
-        )
-    ) {
-        Column(
-            modifier = Modifier.padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                fontWeight = FontWeight.Medium
-            )
-            Text(
-                text = value,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = if (highlight) MaterialTheme.colorScheme.primary else valueColor
-            )
-        }
-    }
-}
-
-/**
- * Mode Option selectable card with Radio button
- */
-@Composable
-private fun ModeOptionCard(
+private fun StitchProfileCard(
     title: String,
     subtitle: String,
+    tag: String,
+    icon: ImageVector,
     isSelected: Boolean,
-    isDefault: Boolean = false,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    Surface(
-        onClick = onClick,
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        color = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f) else MaterialTheme.colorScheme.surface,
+    Card(
+        modifier = modifier
+            .clip(RoundedCornerShape(14.dp))
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLowest
+        ),
         border = BorderStroke(
-            1.dp,
-            if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant
-        )
+            if (isSelected) 1.5.dp else 1.dp,
+            if (isSelected) Primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = if (isSelected) 3.dp else 0.dp)
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .padding(10.dp),
+            verticalArrangement = Arrangement.SpaceBetween
         ) {
-            RadioButton(
-                selected = isSelected,
-                onClick = onClick
-            )
-            Spacer(modifier = Modifier.width(10.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = title,
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold
-                    )
-                    if (isDefault) {
-                        Spacer(modifier = Modifier.width(8.dp))
-                        SuggestionChip(
-                            onClick = {},
-                            label = { Text("Default", style = MaterialTheme.typography.labelSmall) },
-                            modifier = Modifier.height(24.dp)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Surface(
+                    shape = CircleShape,
+                    color = if (isSelected) Primary else MaterialTheme.colorScheme.surfaceContainer,
+                    modifier = Modifier.size(30.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = icon,
+                            contentDescription = null,
+                            tint = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(16.dp)
                         )
                     }
                 }
+
+                Surface(
+                    shape = CircleShape,
+                    color = if (isSelected) Primary else MaterialTheme.colorScheme.surfaceContainer,
+                    modifier = Modifier.size(16.dp)
+                ) {
+                    if (isSelected) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Box(
+                                modifier = Modifier
+                                    .size(6.dp)
+                                    .clip(CircleShape)
+                                    .background(Color.White)
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = title,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold,
+                color = if (isSelected) Primary else MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            Surface(
+                shape = RoundedCornerShape(6.dp),
+                color = if (isSelected) Primary else MaterialTheme.colorScheme.surfaceContainerLow
+            ) {
                 Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    text = tag,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                 )
             }
         }
     }
 }
 
-private fun formatBytes(bytes: Long): String = when {
-    bytes >= 1_048_576 -> String.format("%.2f MB", bytes / 1_048_576.0)
-    bytes >= 1024 -> String.format("%.0f KB", bytes / 1024.0)
-    else -> "$bytes B"
+/**
+ * Result Content (Comparison Preview Identik Stitch)
+ */
+@Composable
+private fun StitchCompressResultContent(
+    result: CompressionResult,
+    uiState: CompressUiState,
+    onHomeClick: () -> Unit,
+    onResetClick: () -> Unit,
+    onShareClick: () -> Unit,
+    onOpenClick: () -> Unit,
+    onEditClick: (() -> Unit)? = null
+) {
+    val context = LocalContext.current
+    var comparisonMode by remember { mutableStateOf("slider") } // "slider", "before", "after"
+    var splitFraction by remember { mutableFloatStateOf(0.5f) }
+
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background),
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        // Sub-bar: Home Button Pill & Completion Badge
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(9999.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainer,
+                    modifier = Modifier.clickable(onClick = onHomeClick)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Home,
+                            contentDescription = "Home",
+                            tint = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Text(
+                            text = "Home",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
+
+                Surface(
+                    shape = RoundedCornerShape(9999.dp),
+                    color = MaterialTheme.colorScheme.tertiaryContainer
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.CheckCircle,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(15.dp)
+                        )
+                        Text(
+                            text = "Compression Complete",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                    }
+                }
+            }
+        }
+
+        // Prominent Result Bento Card (Stitch)
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerLowest
+                ),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
+                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.Top
+                    ) {
+                        Column {
+                            Text(
+                                text = "STORAGE RECLAIMED",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                letterSpacing = 1.sp
+                            )
+                            Row(
+                                verticalAlignment = Alignment.Bottom,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Text(
+                                    text = "${String.format("%.1f", result.savedPercentage)}%",
+                                    style = MaterialTheme.typography.displaySmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Primary
+                                )
+                                Text(
+                                    text = "smaller",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Tertiary
+                                )
+                            }
+                        }
+
+                        Surface(
+                            shape = RoundedCornerShape(9999.dp),
+                            color = Tertiary
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.Bolt,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Text(
+                                    text = "Saved ${formatBytes(result.savedBytes)}",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White
+                                )
+                            }
+                        }
+                    }
+
+                    // Transformation Row
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                text = formatBytes(result.originalSize),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.outline
+                            )
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.outlineVariant,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Text(
+                                text = formatBytes(result.compressedSize),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+
+                        Text(
+                            text = "Lossless Perception",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Tertiary
+                        )
+                    }
+
+                    // Visual Progress Weight Bar
+                    val ratio = (result.compressedSize.toFloat() / result.originalSize.toFloat().coerceAtLeast(1f)).coerceIn(0.05f, 1f)
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(10.dp)
+                            .clip(RoundedCornerShape(9999.dp))
+                            .background(MaterialTheme.colorScheme.surfaceContainer)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxHeight()
+                                .fillMaxWidth(ratio)
+                                .clip(RoundedCornerShape(9999.dp))
+                                .background(Primary)
+                        )
+                    }
+                }
+            }
+        }
+
+        // Interactive Before / After Visual Comparison
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerLowest
+                ),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
+                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Compare,
+                                contentDescription = null,
+                                tint = Primary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Text(
+                                text = "Visual Fidelity",
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+
+                        // Mode Toggle Pills
+                        Surface(
+                            shape = RoundedCornerShape(9999.dp),
+                            color = MaterialTheme.colorScheme.surfaceContainerHigh
+                        ) {
+                            Row(modifier = Modifier.padding(2.dp)) {
+                                listOf("slider" to "Split", "before" to "Orig", "after" to "New").forEach { (mode, label) ->
+                                    val isSelected = comparisonMode == mode
+                                    Surface(
+                                        shape = RoundedCornerShape(9999.dp),
+                                        color = if (isSelected) MaterialTheme.colorScheme.surfaceContainerLowest else Color.Transparent,
+                                        modifier = Modifier.clickable { comparisonMode = mode }
+                                    ) {
+                                        Text(
+                                            text = label,
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                            color = if (isSelected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Viewport Box
+                    BoxWithConstraints(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .aspectRatio(4f / 3f)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(MaterialTheme.colorScheme.surfaceContainerHighest)
+                    ) {
+                        val widthPx = constraints.maxWidth.toFloat()
+
+                        when (comparisonMode) {
+                            "before" -> {
+                                AsyncImage(
+                                    model = uiState.selectedImageUri,
+                                    contentDescription = "Original",
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            }
+                            "after" -> {
+                                AsyncImage(
+                                    model = result.outputUri,
+                                    contentDescription = "Optimized",
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            }
+                            else -> {
+                                // Split Slider Mode
+                                AsyncImage(
+                                    model = result.outputUri,
+                                    contentDescription = "After",
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxHeight()
+                                        .fillMaxWidth(splitFraction)
+                                        .clip(RoundedCornerShape(0.dp))
+                                ) {
+                                    AsyncImage(
+                                        model = uiState.selectedImageUri,
+                                        contentDescription = "Before",
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier.fillMaxSize()
+                                    )
+                                }
+
+                                // Draggable Handle
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxHeight()
+                                        .offset(x = (maxWidth * splitFraction) - 16.dp)
+                                        .width(32.dp)
+                                        .pointerInput(Unit) {
+                                            detectDragGestures { change, dragAmount ->
+                                                change.consume()
+                                                val newFraction = (splitFraction + (dragAmount.x / widthPx)).coerceIn(0.05f, 0.95f)
+                                                splitFraction = newFraction
+                                            }
+                                        },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxHeight()
+                                            .width(2.dp)
+                                            .background(Color.White)
+                                    )
+                                    Surface(
+                                        shape = CircleShape,
+                                        color = MaterialTheme.colorScheme.surfaceContainerLowest,
+                                        shadowElevation = 4.dp,
+                                        modifier = Modifier.size(30.dp)
+                                    ) {
+                                        Box(contentAlignment = Alignment.Center) {
+                                            Icon(
+                                                imageVector = Icons.Filled.UnfoldMore,
+                                                contentDescription = null,
+                                                tint = Primary,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // Badges
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = InverseSurface.copy(alpha = 0.8f),
+                            modifier = Modifier
+                                .align(Alignment.TopStart)
+                                .padding(8.dp)
+                        ) {
+                            Text(
+                                text = "Before: ${formatBytes(result.originalSize)}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color.White,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = Primary.copy(alpha = 0.9f),
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .padding(8.dp)
+                        ) {
+                            Text(
+                                text = "After: ${formatBytes(result.compressedSize)}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color.White,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+
+                    // Subtext
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.ZoomIn,
+                                contentDescription = null,
+                                tint = Tertiary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Text(
+                                text = "100% Crisp Edges",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Text(
+                            text = "Drag handle horizontally",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.outline
+                        )
+                    }
+                }
+            }
+        }
+
+        // Storage confirmation card
+        item {
+            Surface(
+                shape = RoundedCornerShape(14.dp),
+                color = MaterialTheme.colorScheme.surfaceContainerLow
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Surface(
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.tertiaryContainer,
+                        modifier = Modifier.size(28.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Filled.Check,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onTertiaryContainer,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
+
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Saved to Device",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = result.outputFileName,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+
+                    IconButton(
+                        onClick = {
+                            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                            val clip = ClipData.newPlainText("File Path", result.outputFileName)
+                            clipboard.setPrimaryClip(clip)
+                            Toast.makeText(context, "File name copied to clipboard", Toast.LENGTH_SHORT).show()
+                        },
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.ContentCopy,
+                            contentDescription = "Copy Path",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+            }
+        }
+
+        // Primary & Secondary Actions
+        item {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                // Primary CTA: Open Result
+                Button(
+                    onClick = onOpenClick,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(50.dp),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Primary),
+                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
+                ) {
+                    Icon(imageVector = Icons.Filled.Visibility, contentDescription = null, modifier = Modifier.size(20.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(text = "Open Result", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+                }
+
+                // Secondary Row: Share Photo + Fullscreen
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = onShareClick,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(48.dp),
+                        shape = RoundedCornerShape(14.dp),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                    ) {
+                        Icon(imageVector = Icons.Filled.Share, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(text = "Share Photo", style = MaterialTheme.typography.labelMedium)
+                    }
+
+                    if (onEditClick != null) {
+                        OutlinedButton(
+                            onClick = onEditClick,
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(48.dp),
+                            shape = RoundedCornerShape(14.dp),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                        ) {
+                            Icon(imageVector = Icons.Filled.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(text = "Fine-tune", style = MaterialTheme.typography.labelMedium)
+                        }
+                    } else {
+                        OutlinedButton(
+                            onClick = onOpenClick,
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(48.dp),
+                            shape = RoundedCornerShape(14.dp),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                        ) {
+                            Icon(imageVector = Icons.Filled.Fullscreen, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(text = "Fullscreen", style = MaterialTheme.typography.labelMedium)
+                        }
+                    }
+                }
+
+                // Tertiary: Compress Another Photo
+                TextButton(
+                    onClick = onResetClick,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 4.dp)
+                ) {
+                    Text(
+                        text = "Compress Another Photo",
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = Primary
+                    )
+                }
+            }
+        }
+    }
 }

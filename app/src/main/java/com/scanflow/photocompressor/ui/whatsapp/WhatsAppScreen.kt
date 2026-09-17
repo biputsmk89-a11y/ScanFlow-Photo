@@ -1,11 +1,20 @@
 package com.scanflow.photocompressor.ui.whatsapp
 
+import android.content.Intent
+import android.net.Uri
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.*
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -13,29 +22,38 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil.compose.AsyncImage
 import com.scanflow.photocompressor.domain.model.WhatsAppTier
-import com.scanflow.photocompressor.ui.components.BeforeAfterPreview
-import com.scanflow.photocompressor.ui.components.ImagePickerCard
-import com.scanflow.photocompressor.ui.theme.Success
-import com.scanflow.photocompressor.util.ReductionCalculator
+import com.scanflow.photocompressor.ui.components.ScanFlowHeader
+import com.scanflow.photocompressor.ui.theme.*
 import com.scanflow.photocompressor.util.ShareHelper
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WhatsAppScreen(
     onNavigateBack: () -> Unit,
-    initialUri: android.net.Uri? = null,
+    initialUri: Uri? = null,
     viewModel: WhatsAppViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    var dismissedResultUri by remember { mutableStateOf<Uri?>(null) }
+
+    val photoPicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            viewModel.selectImage(uri)
+        }
+    }
 
     LaunchedEffect(initialUri) {
         if (initialUri != null && uiState.selectedImageUri != initialUri) {
@@ -43,82 +61,297 @@ fun WhatsAppScreen(
         }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("WhatsApp Ready") },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
+    // Success dialog
+    val activeResultUri = uiState.result?.outputUri?.takeIf { it != dismissedResultUri }
+    activeResultUri?.let { resUri ->
+        AlertDialog(
+            onDismissRequest = { dismissedResultUri = resUri },
+            title = {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(Icons.Filled.Verified, contentDescription = null, tint = Tertiary)
+                    Text("WhatsApp Ready", fontWeight = FontWeight.Bold)
+                }
+            },
+            text = {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(200.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                    ) {
+                        AsyncImage(
+                            model = resUri,
+                            contentDescription = "Result Image",
+                            contentScale = ContentScale.Fit,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
+                    Text(
+                        text = "Your photo is optimized strictly within WhatsApp's 16MB file limit for zero transmission errors.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        try {
+                            val intent = Intent(Intent.ACTION_VIEW).apply {
+                                setDataAndType(resUri, "image/*")
+                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                            }
+                            context.startActivity(intent)
+                        } catch (e: Exception) {
+                            Toast.makeText(context, "No gallery app available", Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Primary)
+                ) {
+                    Text("Open Image")
+                }
+            },
+            dismissButton = {
+                OutlinedButton(
+                    onClick = {
+                        ShareHelper.shareImage(context, resUri, "image/jpeg", "Share via WhatsApp")
+                    }
+                ) {
+                    Icon(Icons.Filled.Share, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("Send to Chat")
+                }
+            }
+        )
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
+        // Sticky Header (Google Stitch)
+        ScanFlowHeader(
+            title = "WhatsApp Optimizer",
+            subtitle = "ScanFlow Foto",
+            onNavigateBack = onNavigateBack
+        )
+
+        Box(modifier = Modifier.fillMaxSize()) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(bottom = 76.dp),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                // Top Context Indicator
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Surface(
+                            shape = RoundedCornerShape(9999.dp),
+                            color = MaterialTheme.colorScheme.surfaceContainerHigh
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.VerifiedUser,
+                                    contentDescription = null,
+                                    tint = Tertiary,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Text(
+                                    text = "Target Strict 16MB Boundary",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+
+                        Surface(
+                            shape = RoundedCornerShape(9999.dp),
+                            color = MaterialTheme.colorScheme.surfaceContainer
+                        ) {
+                            Text(
+                                text = "Instant Send",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.SemiBold,
+                                color = Primary,
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                            )
+                        }
                     }
                 }
-            )
-        }
-    ) { padding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            // 1. SELECT IMAGE
-            item {
-                Text(
-                    text = "1. Select Photo",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                ImagePickerCard(
-                    selectedImageUri = uiState.selectedImageUri,
-                    onImageSelected = { viewModel.selectImage(it) }
-                )
-            }
 
-            if (uiState.selectedImageUri != null) {
-                // 2. PRESETS: Small, Balanced, High Quality, Custom (No absolute file size promises)
+                // Image Preview Card
                 item {
-                    Text(
-                        text = "2. Select WhatsApp Preset",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .aspectRatio(1.25f)
+                            .clip(RoundedCornerShape(16.dp))
+                            .clickable {
+                                photoPicker.launch(
+                                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                                )
+                            },
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (uiState.selectedImageUri != null) {
+                                AsyncImage(
+                                    model = uiState.selectedImageUri,
+                                    contentDescription = "Selected Photo",
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+
+                                Surface(
+                                    shape = RoundedCornerShape(9999.dp),
+                                    color = InverseSurface.copy(alpha = 0.85f),
+                                    modifier = Modifier
+                                        .align(Alignment.BottomCenter)
+                                        .padding(bottom = 12.dp)
+                                ) {
+                                    Text(
+                                        text = "Target: ${uiState.config.tier.displayName}",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.White,
+                                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)
+                                    )
+                                }
+                            } else {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Filled.Send,
+                                        contentDescription = "Pick photo",
+                                        tint = Primary,
+                                        modifier = Modifier.size(44.dp)
+                                    )
+                                    Text(
+                                        text = "Tap to choose a photo for WhatsApp",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Tier Selection Cards (Stitch)
+                item {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        WhatsAppTier.values().forEach { tier ->
-                            Surface(
+                        Text(
+                            text = "OPTIMIZATION PROFILE",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.sp,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+
+                        val tiers = listOf(
+                            Triple(WhatsAppTier.SMALL, "Fast Send", "Quick cellular upload (< 1 MB)"),
+                            Triple(WhatsAppTier.BALANCED, "Balanced", "Recommended for everyday chat (< 16 MB)"),
+                            Triple(WhatsAppTier.HIGH_QUALITY, "HD Media", "Maximum clarity preserved")
+                        )
+
+                        tiers.forEach { (tier, title, subtitle) ->
+                            val isSelected = uiState.config.tier == tier
+                            Card(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clip(RoundedCornerShape(10.dp))
+                                    .clip(RoundedCornerShape(14.dp))
                                     .clickable { viewModel.selectTier(tier) },
-                                shape = RoundedCornerShape(10.dp),
-                                color = if (uiState.config.tier == tier) {
-                                    MaterialTheme.colorScheme.primaryContainer
-                                } else {
-                                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                                }
+                                shape = RoundedCornerShape(14.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceContainerLowest
+                                ),
+                                border = BorderStroke(
+                                    if (isSelected) 1.5.dp else 1.dp,
+                                    if (isSelected) Primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+                                ),
+                                elevation = CardDefaults.cardElevation(defaultElevation = if (isSelected) 2.dp else 0.dp)
                             ) {
                                 Row(
-                                    modifier = Modifier.padding(12.dp),
-                                    verticalAlignment = Alignment.CenterVertically
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(14.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                                 ) {
-                                    RadioButton(
-                                        selected = uiState.config.tier == tier,
-                                        onClick = { viewModel.selectTier(tier) }
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Column {
+                                    Surface(
+                                        shape = CircleShape,
+                                        color = if (isSelected) Primary else MaterialTheme.colorScheme.surfaceContainer,
+                                        modifier = Modifier.size(36.dp)
+                                    ) {
+                                        Box(contentAlignment = Alignment.Center) {
+                                            Icon(
+                                                imageVector = Icons.Filled.Chat,
+                                                contentDescription = null,
+                                                tint = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        }
+                                    }
+
+                                    Column(modifier = Modifier.weight(1f)) {
                                         Text(
-                                            text = tier.displayName,
-                                            fontWeight = FontWeight.SemiBold,
-                                            style = MaterialTheme.typography.bodyMedium
+                                            text = title,
+                                            style = MaterialTheme.typography.labelLarge,
+                                            fontWeight = FontWeight.Bold,
+                                            color = if (isSelected) Primary else MaterialTheme.colorScheme.onSurface
                                         )
                                         Text(
-                                            text = tier.description,
-                                            style = MaterialTheme.typography.labelSmall,
+                                            text = subtitle,
+                                            style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
+                                    }
+
+                                    Surface(
+                                        shape = CircleShape,
+                                        color = if (isSelected) Primary else MaterialTheme.colorScheme.surfaceContainer,
+                                        modifier = Modifier.size(20.dp)
+                                    ) {
+                                        if (isSelected) {
+                                            Box(contentAlignment = Alignment.Center) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .size(8.dp)
+                                                        .clip(CircleShape)
+                                                        .background(Color.White)
+                                                )
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -126,219 +359,81 @@ fun WhatsAppScreen(
                     }
                 }
 
-                // 3. CUSTOM SETTINGS (if Custom is selected)
-                if (uiState.config.tier == WhatsAppTier.CUSTOM) {
-                    item {
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Column(modifier = Modifier.padding(14.dp)) {
-                                Text(
-                                    text = "Max Dimension: ${uiState.config.customMaxDimension} px",
-                                    fontWeight = FontWeight.SemiBold,
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-                                Slider(
-                                    value = uiState.config.customMaxDimension.toFloat(),
-                                    onValueChange = { viewModel.updateCustomMaxDimension(it.toInt()) },
-                                    valueRange = 640f..2560f,
-                                    steps = 11
-                                )
-
-                                Spacer(modifier = Modifier.height(6.dp))
-                                Text(
-                                    text = "Quality: ${uiState.config.customQuality}%",
-                                    fontWeight = FontWeight.SemiBold,
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-                                Slider(
-                                    value = uiState.config.customQuality.toFloat(),
-                                    onValueChange = { viewModel.updateCustomQuality(it.toInt()) },
-                                    valueRange = 10f..100f,
-                                    steps = 17
-                                )
-                            }
-                        }
-                    }
-                }
-
-                // 4. PROCESS BUTTON
+                // Local Guarantee Note
                 item {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Button(
-                        onClick = { viewModel.processWhatsAppImage() },
-                        enabled = !uiState.isProcessing,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .heightIn(min = 52.dp)
-                            .semantics {
-                                contentDescription = "Optimize photo for WhatsApp sharing (${uiState.config.tier.displayName})"
-                            },
-                        shape = RoundedCornerShape(14.dp)
+                    Surface(
+                        shape = RoundedCornerShape(14.dp),
+                        color = MaterialTheme.colorScheme.surfaceContainerLow
                     ) {
-                        if (uiState.isProcessing) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(22.dp),
-                                color = MaterialTheme.colorScheme.onPrimary,
-                                strokeWidth = 2.dp
-                            )
-                            Spacer(modifier = Modifier.width(10.dp))
-                            Text("Optimizing for WhatsApp...")
-                        } else {
-                            Icon(Icons.AutoMirrored.Filled.Send, contentDescription = null)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Optimize for WhatsApp (${uiState.config.tier.displayName})", fontWeight = FontWeight.Bold)
-                        }
-                    }
-                }
-
-                // 5. RESULT SECTION: Displays Before, After, Saved, Reduction
-                val activeResult = uiState.result
-                if (activeResult != null) {
-                    item {
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-                            shape = RoundedCornerShape(14.dp)
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            val result = activeResult
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(16.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                Icon(
-                                    Icons.Filled.CheckCircle,
-                                    contentDescription = null,
-                                    tint = Success,
-                                    modifier = Modifier.size(40.dp)
-                                )
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Text(
-                                    text = "WhatsApp Ready!",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold
-                                )
-
-                                Spacer(modifier = Modifier.height(16.dp))
-
-                                // 4 Core Metrics: Before, After, Saved, Reduction
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    MetricCard(
-                                        label = "Before",
-                                        value = ReductionCalculator.formatBytes(result.originalBytes),
-                                        modifier = Modifier.weight(1f)
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    MetricCard(
-                                        label = "After",
-                                        value = ReductionCalculator.formatBytes(result.outputBytes),
-                                        modifier = Modifier.weight(1f)
-                                    )
-                                }
-
-                                Spacer(modifier = Modifier.height(8.dp))
-
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    MetricCard(
-                                        label = "Saved",
-                                        value = ReductionCalculator.formatBytes(result.savedBytes),
-                                        modifier = Modifier.weight(1f)
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    MetricCard(
-                                        label = "Reduction",
-                                        value = "-${String.format("%.1f", result.reductionPercent)}%",
-                                        modifier = Modifier.weight(1f),
-                                        highlightColor = Success
-                                    )
-                                }
-
-                                Spacer(modifier = Modifier.height(16.dp))
-
-                                // Before / After interactive preview
-                                BeforeAfterPreview(
-                                    originalUri = uiState.selectedImageUri,
-                                    resultUri = result.outputUri,
-                                    originalSize = ReductionCalculator.formatBytes(result.originalBytes),
-                                    resultSize = ReductionCalculator.formatBytes(result.outputBytes),
-                                    savedPercentage = "-${String.format("%.1f", result.reductionPercent)}%"
-                                )
-
-                                Spacer(modifier = Modifier.height(16.dp))
-                                Button(
-                                    onClick = {
-                                        ShareHelper.shareImage(
-                                            context,
-                                            result.outputUri,
-                                            "image/jpeg",
-                                            "Share to WhatsApp"
-                                        )
-                                    },
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    Icon(Icons.AutoMirrored.Filled.Send, null)
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text("Share to WhatsApp")
-                                }
-                            }
+                            Icon(Icons.Filled.Lock, contentDescription = null, tint = Tertiary, modifier = Modifier.size(18.dp))
+                            Text(
+                                text = "Optimized directly on device with zero cloud upload.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
-                    }
-                }
-
-                // ERROR MESSAGE
-                val error = uiState.errorMessage
-                if (error != null) {
-                    item {
-                        Text(
-                            text = error,
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodySmall
-                        )
                     }
                 }
             }
-        }
-    }
-}
 
-@Composable
-private fun MetricCard(
-    label: String,
-    value: String,
-    modifier: Modifier = Modifier,
-    highlightColor: androidx.compose.ui.graphics.Color? = null
-) {
-    Surface(
-        modifier = modifier,
-        shape = RoundedCornerShape(10.dp),
-        color = MaterialTheme.colorScheme.surface
-    ) {
-        Column(
-            modifier = Modifier.padding(10.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(
-                text = value,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold,
-                color = highlightColor ?: MaterialTheme.colorScheme.onSurface
-            )
+            // Fixed Sticky Bottom Bar
+            Surface(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth(),
+                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
+                tonalElevation = 4.dp
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 12.dp)
+                ) {
+                    Button(
+                        onClick = {
+                            if (uiState.selectedImageUri != null) {
+                                viewModel.processWhatsAppImage()
+                            } else {
+                                photoPicker.launch(
+                                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                                )
+                            }
+                        },
+                        enabled = !uiState.isProcessing,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(52.dp),
+                        shape = RoundedCornerShape(14.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Primary),
+                        elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
+                    ) {
+                        if (uiState.isProcessing) {
+                            CircularProgressIndicator(
+                                color = Color.White,
+                                strokeWidth = 2.dp,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text("Optimizing...", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+                        } else {
+                            Icon(Icons.AutoMirrored.Filled.Send, contentDescription = null, modifier = Modifier.size(20.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                text = "Optimize for WhatsApp",
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
 }

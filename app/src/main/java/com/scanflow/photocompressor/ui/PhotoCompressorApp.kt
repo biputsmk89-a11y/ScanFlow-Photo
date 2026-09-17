@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
@@ -66,7 +67,10 @@ fun PhotoCompressorApp(
     Scaffold(
         bottomBar = {
             if (showBottomBar) {
-                NavigationBar {
+                NavigationBar(
+                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
+                    tonalElevation = 2.dp
+                ) {
                     Screen.bottomNavItems.forEach { screen ->
                         val selected = navBackStackEntry?.destination?.hierarchy?.any {
                             it.route == screen.route
@@ -78,8 +82,20 @@ fun PhotoCompressorApp(
                                     Icon(it, contentDescription = screen.title)
                                 }
                             },
-                            label = { Text(screen.title) },
+                            label = {
+                                Text(
+                                    text = screen.title,
+                                    fontWeight = if (selected) androidx.compose.ui.text.font.FontWeight.Bold else androidx.compose.ui.text.font.FontWeight.Normal
+                                )
+                            },
                             selected = selected,
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = com.scanflow.photocompressor.ui.theme.Primary,
+                                selectedTextColor = com.scanflow.photocompressor.ui.theme.Primary,
+                                indicatorColor = com.scanflow.photocompressor.ui.theme.Primary.copy(alpha = 0.12f),
+                                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+                            ),
                             onClick = {
                                 navController.navigate(screen.route) {
                                     popUpTo(navController.graph.findStartDestination().id) {

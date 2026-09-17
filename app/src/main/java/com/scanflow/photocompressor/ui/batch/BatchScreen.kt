@@ -1,33 +1,64 @@
 package com.scanflow.photocompressor.ui.batch
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.*
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.scanflow.photocompressor.ui.components.*
-import com.scanflow.photocompressor.ui.theme.Success
+import coil.compose.AsyncImage
+import com.scanflow.photocompressor.domain.model.BatchItemStatus
+import com.scanflow.photocompressor.domain.model.BatchJob
+import com.scanflow.photocompressor.ui.components.ScanFlowHeader
+import com.scanflow.photocompressor.ui.theme.*
+import com.scanflow.photocompressor.util.ShareHelper
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BatchScreen(
     onNavigateBack: () -> Unit,
-    initialUris: List<android.net.Uri>? = null,
+    initialUris: List<Uri>? = null,
     viewModel: BatchViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val context = androidx.compose.ui.platform.LocalContext.current
+    val context = LocalContext.current
+
+    val multiplePhotoPicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickMultipleVisualMedia(maxItems = 50)
+    ) { uris: List<Uri> ->
+        if (uris.isNotEmpty()) {
+            viewModel.addImages(uris)
+        }
+    }
 
     LaunchedEffect(initialUris) {
         if (!initialUris.isNullOrEmpty()) {
@@ -35,405 +66,812 @@ fun BatchScreen(
         }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Batch Compress") },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
-                    }
-                }
-            )
-        }
-    ) { padding ->
-        Box(modifier = Modifier.fillMaxSize()) {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize().padding(padding),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                if (uiState.batchJob == null) {
-                    item {
-                        ImagePickerCard(
-                            selectedImageUri = uiState.selectedImages.firstOrNull()?.uri,
-                            onImageSelected = { viewModel.addImages(listOf(it)) },
-                            allowMultiple = true,
-                            onMultipleImagesSelected = { viewModel.addImages(it) }
-                        )
-                    }
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
+        // Sticky Header (Google Stitch)
+        ScanFlowHeader(
+            title = "Batch Process",
+            subtitle = "ScanFlow Foto",
+            onNavigateBack = onNavigateBack
+        )
 
-                    if (uiState.selectedImages.isNotEmpty()) {
-                        item {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            // Header Context Banner
+            item {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text(
+                            text = "Batch Process",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            modifier = Modifier.padding(top = 2.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(7.dp)
+                                    .clip(CircleShape)
+                                    .background(Primary)
+                            )
                             Text(
-                                "${uiState.selectedImages.size} images selected",
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.SemiBold
+                                text = "${uiState.selectedImages.size} photos selected • High Efficiency Engine",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
-
-                        itemsIndexed(uiState.selectedImages) { index, image ->
-                            Card(
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(10.dp)
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(10.dp).fillMaxWidth(),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    SafeThumbnail(
-                                        data = image.uri,
-                                        contentDescription = image.fileName,
-                                        modifier = Modifier
-                                            .size(44.dp)
-                                            .clip(RoundedCornerShape(8.dp))
-                                    )
-                                    Spacer(modifier = Modifier.width(10.dp))
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(image.fileName, style = MaterialTheme.typography.bodySmall, maxLines = 1)
-                                        Text(
-                                            "${image.resolution} • ${String.format("%.1f", image.fileSizeMB)} MB",
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                    IconButton(onClick = { viewModel.removeImage(index) }) {
-                                        Icon(Icons.Filled.Close, "Remove", modifier = Modifier.size(18.dp))
-                                    }
-                                }
-                            }
-                        }
                     }
 
-                    // Preset selector
-                    if (uiState.presets.isNotEmpty()) {
-                        item {
-                            Text("Select Preset", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-                        }
-                        item {
-                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                uiState.presets.take(3).forEach { preset ->
-                                    FilterChip(
-                                        selected = uiState.selectedPreset?.name == preset.name,
-                                        onClick = { viewModel.selectPreset(preset) },
-                                        label = { Text(preset.name, style = MaterialTheme.typography.labelSmall) },
-                                        modifier = Modifier.weight(1f)
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    // Start button
-                    item {
-                        Button(
-                            onClick = { viewModel.startBatch() },
-                            modifier = Modifier.fillMaxWidth().height(52.dp),
-                            enabled = uiState.selectedImages.isNotEmpty() && !uiState.isProcessing,
-                            shape = RoundedCornerShape(14.dp)
+                    Surface(
+                        shape = RoundedCornerShape(9999.dp),
+                        color = MaterialTheme.colorScheme.surfaceContainerHigh
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
-                            Icon(Icons.Filled.PlayArrow, null, modifier = Modifier.size(20.dp))
-                            Spacer(Modifier.width(8.dp))
-                            Text(if (uiState.isProcessing) "Processing..." else "Start Batch", fontWeight = FontWeight.SemiBold)
+                            Icon(
+                                imageVector = Icons.Filled.PhotoLibrary,
+                                contentDescription = null,
+                                tint = Primary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Text(
+                                text = "${uiState.selectedImages.size} items",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = Primary
+                            )
                         }
                     }
+                }
+            }
 
-                    uiState.error?.let { err ->
-                        item {
-                            Card(
-                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
-                                shape = RoundedCornerShape(12.dp)
+            // If No Job Started: Picker + Selected Grid
+            if (uiState.batchJob == null) {
+                // Add Photos Trigger Button
+                item {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(16.dp))
+                            .clickable {
+                                multiplePhotoPicker.launch(
+                                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                                )
+                            },
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainerLowest
+                        ),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(18.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(14.dp)
+                        ) {
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.12f),
+                                modifier = Modifier.size(50.dp)
                             ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = Icons.Filled.AddPhotoAlternate,
+                                        contentDescription = null,
+                                        tint = Primary,
+                                        modifier = Modifier.size(28.dp)
+                                    )
+                                }
+                            }
+                            Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = err,
-                                    modifier = Modifier.padding(14.dp),
-                                    color = MaterialTheme.colorScheme.onErrorContainer,
-                                    style = MaterialTheme.typography.bodyMedium
+                                    text = if (uiState.selectedImages.isEmpty()) "Select Photos for Batch" else "Add More Photos",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "Supports JPEG, PNG, WebP up to 50 files",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.outlineVariant
+                            )
                         }
                     }
-                } else {
-                    val job = uiState.batchJob ?: return@LazyColumn
+                }
 
-                    // Progress Card
+                // Preset Selector Chips
+                if (uiState.presets.isNotEmpty()) {
                     item {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text(
+                                text = "BATCH OPTIMIZATION PRESET",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 1.sp,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                uiState.presets.take(3).forEach { preset ->
+                                    val isSelected = uiState.selectedPreset?.name == preset.name
+                                    Surface(
+                                        shape = RoundedCornerShape(12.dp),
+                                        color = if (isSelected) Primary else MaterialTheme.colorScheme.surfaceContainerLowest,
+                                        border = BorderStroke(
+                                            1.dp,
+                                            if (isSelected) Primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+                                        ),
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .clip(RoundedCornerShape(12.dp))
+                                            .clickable { viewModel.selectPreset(preset) }
+                                    ) {
+                                        Column(
+                                            modifier = Modifier.padding(vertical = 10.dp, horizontal = 8.dp),
+                                            horizontalAlignment = Alignment.CenterHorizontally
+                                        ) {
+                                            Text(
+                                                text = preset.name,
+                                                style = MaterialTheme.typography.labelMedium,
+                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                                color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Selected Photos Queue
+                if (uiState.selectedImages.isNotEmpty()) {
+                    item {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Queue (${uiState.selectedImages.size})",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold
+                            )
+                            TextButton(onClick = { viewModel.reset() }) {
+                                Text("Clear All", color = MaterialTheme.colorScheme.error)
+                            }
+                        }
+                    }
+
+                    itemsIndexed(uiState.selectedImages) { index, img ->
                         Card(
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(12.dp),
                             colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                            )
+                                containerColor = MaterialTheme.colorScheme.surfaceContainerLowest
+                            ),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
                         ) {
-                            Column(modifier = Modifier.padding(16.dp)) {
-                                GradientLinearProgress(progress = job.progressPercentage)
-                                Spacer(Modifier.height(8.dp))
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(10.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = MaterialTheme.colorScheme.surfaceContainer,
+                                    modifier = Modifier
+                                        .size(44.dp)
+                                        .clip(RoundedCornerShape(8.dp))
+                                ) {
+                                    AsyncImage(
+                                        model = img.uri,
+                                        contentDescription = img.fileName,
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier.fillMaxSize()
+                                    )
+                                }
+
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = img.fileName,
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    Text(
+                                        text = "${img.resolution} • ${String.format("%.1f", img.fileSizeMB)} MB",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+
+                                IconButton(
+                                    onClick = { viewModel.removeImage(index) },
+                                    modifier = Modifier.size(32.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Filled.Close,
+                                        contentDescription = "Remove",
+                                        tint = MaterialTheme.colorScheme.outline,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // Start Batch Primary Action
+                    item {
+                        Button(
+                            onClick = { viewModel.startBatch() },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(52.dp),
+                            shape = RoundedCornerShape(14.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Primary),
+                            elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
+                        ) {
+                            Icon(Icons.Filled.Bolt, contentDescription = null, modifier = Modifier.size(20.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                text = "Start Batch Compression (${uiState.selectedImages.size})",
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
+            } else {
+                // ==========================================
+                // ACTIVE BATCH JOB / COMPLETED BATCH JOB
+                // ==========================================
+                val job = uiState.batchJob ?: return@LazyColumn
+
+                // Active Live Processing Card (Stitch)
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainerLowest
+                        ),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(14.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    Surface(
+                                        shape = CircleShape,
+                                        color = MaterialTheme.colorScheme.primaryContainer,
+                                        modifier = Modifier.size(40.dp)
+                                    ) {
+                                        Box(contentAlignment = Alignment.Center) {
+                                            if (uiState.isProcessing) {
+                                                CircularProgressIndicator(
+                                                    color = Primary,
+                                                    strokeWidth = 2.5.dp,
+                                                    modifier = Modifier.size(20.dp)
+                                                )
+                                            } else {
+                                                Icon(
+                                                    imageVector = Icons.Filled.Check,
+                                                    contentDescription = null,
+                                                    tint = Primary,
+                                                    modifier = Modifier.size(22.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+
+                                    Column {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                        ) {
+                                            Text(
+                                                text = if (uiState.isProcessing) "Processing Photos" else "Batch Complete",
+                                                style = MaterialTheme.typography.titleMedium,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.onSurface
+                                            )
+                                            if (uiState.isProcessing) {
+                                                Surface(
+                                                    shape = RoundedCornerShape(9999.dp),
+                                                    color = Primary.copy(alpha = 0.1f)
+                                                ) {
+                                                    Text(
+                                                        text = "Live",
+                                                        style = MaterialTheme.typography.labelSmall,
+                                                        color = Primary,
+                                                        fontWeight = FontWeight.Bold,
+                                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                                    )
+                                                }
+                                            }
+                                        }
+                                        Text(
+                                            text = "${job.completedCount} of ${job.totalCount} completed",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+
+                                if (uiState.isProcessing) {
+                                    OutlinedButton(
+                                        onClick = { viewModel.cancelBatch() },
+                                        shape = RoundedCornerShape(8.dp),
+                                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                                    ) {
+                                        Icon(Icons.Filled.Close, contentDescription = null, modifier = Modifier.size(16.dp))
+                                        Spacer(Modifier.width(4.dp))
+                                        Text("Cancel", style = MaterialTheme.typography.labelSmall)
+                                    }
+                                }
+                            }
+
+                            // Dual-tone Track Progress Bar
+                            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                val progress = (job.progressPercentage / 100f).coerceIn(0f, 1f)
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(10.dp)
+                                        .clip(RoundedCornerShape(9999.dp))
+                                        .background(MaterialTheme.colorScheme.surfaceContainer)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxHeight()
+                                            .fillMaxWidth(progress)
+                                            .clip(RoundedCornerShape(9999.dp))
+                                            .background(Primary)
+                                    )
+                                }
+
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
-                                    Text(
-                                        "${job.completedCount}/${job.totalCount} completed",
-                                        style = MaterialTheme.typography.bodySmall
-                                    )
-                                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        if (job.failedCount > 0) {
-                                            Text(
-                                                "${job.failedCount} failed",
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.error
-                                            )
-                                        }
-                                        if (job.cancelledCount > 0) {
-                                            Text(
-                                                "${job.cancelledCount} cancelled",
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.outline
-                                            )
-                                        }
-                                    }
-                                }
-                                if (job.totalSavedBytes > 0) {
-                                    Spacer(Modifier.height(8.dp))
-                                    Text(
-                                        "💾 Total saved: ${formatBytes(job.totalSavedBytes)}",
-                                        style = MaterialTheme.typography.labelLarge,
-                                        color = Success,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    // Main Action Buttons
-                    if (uiState.isProcessing) {
-                        item {
-                            OutlinedButton(
-                                onClick = { viewModel.cancelBatch() },
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(14.dp),
-                                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
-                            ) {
-                                Icon(Icons.Filled.Close, null, modifier = Modifier.size(18.dp))
-                                Spacer(Modifier.width(8.dp))
-                                Text("Cancel Batch")
-                            }
-                        }
-                    } else {
-                        item {
-                            Column(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                if (job.failedCount > 0 || job.cancelledCount > 0) {
-                                    // 1 Primary Action: Retry Failed Items
-                                    Button(
-                                        onClick = { viewModel.retryBatch() },
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .height(50.dp),
-                                        shape = RoundedCornerShape(14.dp)
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
                                     ) {
-                                        Icon(Icons.Filled.Refresh, null, modifier = Modifier.size(18.dp))
-                                        Spacer(Modifier.width(8.dp))
+                                        Box(
+                                            modifier = Modifier
+                                                .size(6.dp)
+                                                .clip(CircleShape)
+                                                .background(Primary)
+                                        )
                                         Text(
-                                            "Retry Failed Items (${job.failedCount + job.cancelledCount})",
-                                            fontWeight = FontWeight.SemiBold
+                                            text = if (uiState.isProcessing) "Running High-Speed Compression" else "All tasks finished",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = Primary,
+                                            fontWeight = FontWeight.Medium
                                         )
                                     }
+                                    Text(
+                                        text = "${job.progressPercentage}%",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
 
-                                    // Secondary Action: Start New Batch
-                                    OutlinedButton(
-                                        onClick = { viewModel.reset() },
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .height(48.dp),
-                                        shape = RoundedCornerShape(14.dp)
+                // Batch Summary & Storage Impact Bento Card (Stitch)
+                if (job.completedCount > 0) {
+                    item {
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceContainerLowest
+                            ),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                                     ) {
-                                        Text("Start New Batch")
+                                        Surface(
+                                            shape = CircleShape,
+                                            color = MaterialTheme.colorScheme.tertiaryContainer,
+                                            modifier = Modifier.size(28.dp)
+                                        ) {
+                                            Box(contentAlignment = Alignment.Center) {
+                                                Icon(
+                                                    imageVector = Icons.Filled.Verified,
+                                                    contentDescription = null,
+                                                    tint = Tertiary,
+                                                    modifier = Modifier.size(18.dp)
+                                                )
+                                            }
+                                        }
+                                        Text(
+                                            text = "Batch Complete",
+                                            style = MaterialTheme.typography.titleSmall,
+                                            fontWeight = FontWeight.Bold
+                                        )
                                     }
-                                } else {
-                                    // 1 Primary Action: Start New Batch when all succeed
-                                    Button(
-                                        onClick = { viewModel.reset() },
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .height(50.dp),
-                                        shape = RoundedCornerShape(14.dp)
+                                    Surface(
+                                        shape = RoundedCornerShape(9999.dp),
+                                        color = MaterialTheme.colorScheme.surfaceContainerLow
                                     ) {
-                                        Icon(Icons.Filled.AddPhotoAlternate, null, modifier = Modifier.size(18.dp))
-                                        Spacer(Modifier.width(8.dp))
-                                        Text("Start New Batch", fontWeight = FontWeight.SemiBold)
+                                        Text(
+                                            text = "${job.completedCount} photos processed",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                                        )
                                     }
                                 }
 
-                                val completedUris = job.items.mapNotNull { it.outputUri }
-                                if (completedUris.isNotEmpty()) {
-                                    OutlinedButton(
-                                        onClick = {
-                                            com.scanflow.photocompressor.util.ShareHelper.shareImages(
-                                                context = context,
-                                                uris = completedUris,
-                                                mimeType = "image/*",
-                                                title = "Share Batch Photos"
-                                            )
-                                        },
+                                // Storage Impact Metric Bento
+                                Surface(
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = MaterialTheme.colorScheme.surfaceContainerLow
+                                ) {
+                                    val totalOrig = job.items.sumOf { it.originalBytes }.takeIf { it > 0 } ?: uiState.selectedImages.sumOf { it.fileSize }
+                                    val totalComp = job.items.filter { it.status == BatchItemStatus.SUCCESS }.sumOf { it.outputBytes }
+                                    Row(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .height(48.dp),
-                                        shape = RoundedCornerShape(14.dp)
+                                            .padding(12.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Icon(Icons.Filled.Share, null, modifier = Modifier.size(18.dp))
-                                        Spacer(Modifier.width(8.dp))
-                                        Text("Share Completed Photos (${completedUris.size})")
+                                        Column {
+                                            Text(
+                                                text = "Original",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                            Text(
+                                                text = formatBytes(totalOrig),
+                                                style = MaterialTheme.typography.titleMedium,
+                                                color = MaterialTheme.colorScheme.outline,
+                                                textDecoration = TextDecoration.LineThrough
+                                            )
+                                        }
+
+                                        Icon(
+                                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                            contentDescription = null,
+                                            tint = Primary,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+
+                                        Column(horizontalAlignment = Alignment.End) {
+                                            Text(
+                                                text = "Optimized",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = Tertiary,
+                                                fontWeight = FontWeight.SemiBold
+                                            )
+                                            Text(
+                                                text = formatBytes(totalComp),
+                                                style = MaterialTheme.typography.titleMedium,
+                                                color = Tertiary,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        }
+                                    }
+                                }
+
+                                // Savings Callout
+                                Surface(
+                                    shape = RoundedCornerShape(10.dp),
+                                    color = MaterialTheme.colorScheme.surfaceContainer
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Filled.DataSaverOn,
+                                                contentDescription = null,
+                                                tint = Tertiary,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                            Text(
+                                                text = "Saved ${formatBytes(job.totalSavedBytes)} on device",
+                                                style = MaterialTheme.typography.labelMedium,
+                                                fontWeight = FontWeight.Medium
+                                            )
+                                        }
+
+                                        val totalOrig = job.items.sumOf { it.originalBytes }.takeIf { it > 0 } ?: uiState.selectedImages.sumOf { it.fileSize }
+                                        val pct = if (totalOrig > 0) {
+                                            ((job.totalSavedBytes.toDouble() / totalOrig.toDouble()) * 100)
+                                        } else 0.0
+                                        Surface(
+                                            shape = RoundedCornerShape(9999.dp),
+                                            color = Tertiary
+                                        ) {
+                                            Text(
+                                                text = "${String.format("%.1f", pct)}% smaller",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                fontWeight = FontWeight.Bold,
+                                                color = Color.White,
+                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                                            )
+                                        }
                                     }
                                 }
                             }
                         }
                     }
+                }
 
-                    // Section: Batch Items with Per-Item Status and Retry
-                    item {
-                        Text(
-                            "Batch Items (${job.items.size})",
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
-
-                    itemsIndexed(job.items, key = { _, item -> item.id }) { index, item ->
-                        val fileName = item.sourceUri.lastPathSegment?.substringAfterLast('/') ?: "Image #${index + 1}"
-                        Card(
+                // Asset Inspect Grid: 3-column Stitch Thumbnail Matrix
+                item {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(
                             modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(10.dp)
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
+                            Text(
+                                text = "Asset Inspect Grid",
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "${job.completedCount} Cleared • ${job.failedCount} Failed",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+
+                        // Display in 3-column rows
+                        val chunkedItems = job.items.chunked(3)
+                        chunkedItems.forEach { rowItems ->
                             Row(
-                                modifier = Modifier.padding(12.dp).fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = fileName,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = FontWeight.Medium,
-                                        maxLines = 1
-                                    )
-                                    Spacer(Modifier.height(4.dp))
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        when (item.status) {
-                                            com.scanflow.photocompressor.domain.model.BatchItemStatus.SUCCESS -> {
-                                                Icon(
-                                                    Icons.Filled.CheckCircle,
-                                                    contentDescription = "Success",
-                                                    tint = Success,
-                                                    modifier = Modifier.size(16.dp)
+                                rowItems.forEach { item ->
+                                    Card(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .aspectRatio(0.85f),
+                                        shape = RoundedCornerShape(12.dp),
+                                        colors = CardDefaults.cardColors(
+                                            containerColor = MaterialTheme.colorScheme.surfaceContainerLowest
+                                        ),
+                                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+                                    ) {
+                                        Column(
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .padding(6.dp),
+                                            verticalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .aspectRatio(1f)
+                                                    .clip(RoundedCornerShape(8.dp))
+                                                    .background(MaterialTheme.colorScheme.surfaceContainer)
+                                            ) {
+                                                AsyncImage(
+                                                    model = item.outputUri ?: item.sourceUri,
+                                                    contentDescription = item.sourceUri.lastPathSegment ?: "Item",
+                                                    contentScale = ContentScale.Crop,
+                                                    modifier = Modifier.fillMaxSize()
                                                 )
-                                                Spacer(Modifier.width(4.dp))
-                                                val sizeInfo = if (item.originalBytes > 0 && item.outputBytes > 0) {
-                                                    " • ${formatBytes(item.originalBytes)} → ${formatBytes(item.outputBytes)}"
-                                                } else ""
-                                                Text(
-                                                    "Completed$sizeInfo",
-                                                    style = MaterialTheme.typography.labelSmall,
-                                                    color = Success
-                                                )
+
+                                                if (item.status == BatchItemStatus.SUCCESS) {
+                                                    Surface(
+                                                        shape = CircleShape,
+                                                        color = Tertiary,
+                                                        modifier = Modifier
+                                                            .align(Alignment.TopEnd)
+                                                            .padding(4.dp)
+                                                            .size(20.dp)
+                                                    ) {
+                                                        Box(contentAlignment = Alignment.Center) {
+                                                            Icon(
+                                                                imageVector = Icons.Filled.Check,
+                                                                contentDescription = null,
+                                                                tint = Color.White,
+                                                                modifier = Modifier.size(12.dp)
+                                                            )
+                                                        }
+                                                    }
+                                                }
                                             }
-                                            com.scanflow.photocompressor.domain.model.BatchItemStatus.FAILED -> {
-                                                Icon(
-                                                    Icons.Filled.Error,
-                                                    contentDescription = "Failed",
-                                                    tint = MaterialTheme.colorScheme.error,
-                                                    modifier = Modifier.size(16.dp)
-                                                )
-                                                Spacer(Modifier.width(4.dp))
+
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.SpaceBetween,
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                val displayName = item.sourceUri.lastPathSegment ?: "Item"
                                                 Text(
-                                                    item.error?.userFacingMessage ?: "Failed",
+                                                    text = displayName,
                                                     style = MaterialTheme.typography.labelSmall,
-                                                    color = MaterialTheme.colorScheme.error,
-                                                    maxLines = 1
+                                                    fontWeight = FontWeight.Bold,
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis,
+                                                    modifier = Modifier.weight(1f)
                                                 )
-                                            }
-                                            com.scanflow.photocompressor.domain.model.BatchItemStatus.CANCELLED -> {
-                                                Icon(
-                                                    Icons.Filled.Cancel,
-                                                    contentDescription = "Cancelled",
-                                                    tint = MaterialTheme.colorScheme.outline,
-                                                    modifier = Modifier.size(16.dp)
-                                                )
-                                                Spacer(Modifier.width(4.dp))
+                                                val sizeTxt = if (item.outputBytes > 0) {
+                                                    formatBytes(item.outputBytes)
+                                                } else {
+                                                    formatBytes(item.originalBytes)
+                                                }
                                                 Text(
-                                                    "Cancelled",
-                                                    style = MaterialTheme.typography.labelSmall,
-                                                    color = MaterialTheme.colorScheme.outline
-                                                )
-                                            }
-                                            com.scanflow.photocompressor.domain.model.BatchItemStatus.PROCESSING -> {
-                                                CircularProgressIndicator(
-                                                    modifier = Modifier.size(14.dp),
-                                                    strokeWidth = 2.dp
-                                                )
-                                                Spacer(Modifier.width(6.dp))
-                                                Text(
-                                                    "Processing...",
-                                                    style = MaterialTheme.typography.labelSmall,
-                                                    color = MaterialTheme.colorScheme.primary
-                                                )
-                                            }
-                                            com.scanflow.photocompressor.domain.model.BatchItemStatus.QUEUED -> {
-                                                Icon(
-                                                    Icons.Filled.Schedule,
-                                                    contentDescription = "Queued",
-                                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                    modifier = Modifier.size(16.dp)
-                                                )
-                                                Spacer(Modifier.width(4.dp))
-                                                Text(
-                                                    "Queued",
-                                                    style = MaterialTheme.typography.labelSmall,
+                                                    text = sizeTxt,
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    fontSize = 10.sp,
                                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                                 )
                                             }
                                         }
                                     }
                                 }
-
-                                // Per-item retry button for failed/cancelled items when not actively processing
-                                if (!uiState.isProcessing && (item.status == com.scanflow.photocompressor.domain.model.BatchItemStatus.FAILED || item.status == com.scanflow.photocompressor.domain.model.BatchItemStatus.CANCELLED)) {
-                                    OutlinedButton(
-                                        onClick = { viewModel.retryItem(item.id) },
-                                        shape = RoundedCornerShape(8.dp),
-                                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-                                        modifier = Modifier.height(32.dp)
-                                    ) {
-                                        Icon(Icons.Filled.Refresh, contentDescription = "Retry", modifier = Modifier.size(14.dp))
-                                        Spacer(Modifier.width(4.dp))
-                                        Text("Retry", style = MaterialTheme.typography.labelSmall)
-                                    }
+                                // Fill dummy spacers if row has fewer than 3 items
+                                repeat(3 - rowItems.size) {
+                                    Spacer(modifier = Modifier.weight(1f))
                                 }
                             }
                         }
                     }
                 }
 
-                item { Spacer(Modifier.height(16.dp)) }
-            }
+                // Bottom Command Actions (Stitch)
+                item {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        val completedUris = job.items.mapNotNull { it.outputUri }
 
-            if (uiState.isProcessing) {
-                val job = uiState.batchJob
-                ProcessingOverlay(
-                    isVisible = true,
-                    progress = job?.progressPercentage ?: -1f,
-                    message = "Processing ${(job?.completedCount ?: 0) + (job?.processingCount ?: 0)}/${job?.totalCount ?: 0}...",
-                    onCancel = { viewModel.cancelBatch() }
-                )
+                        Button(
+                            onClick = {
+                                if (completedUris.isNotEmpty()) {
+                                    ShareHelper.shareImages(
+                                        context = context,
+                                        uris = completedUris,
+                                        mimeType = "image/*",
+                                        title = "Share Batch Photos"
+                                    )
+                                } else {
+                                    viewModel.reset()
+                                }
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(50.dp),
+                            shape = RoundedCornerShape(14.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Primary),
+                            elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
+                        ) {
+                            Icon(Icons.Filled.Save, contentDescription = null, modifier = Modifier.size(20.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                text = "Save All to Gallery (${completedUris.size})",
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            OutlinedButton(
+                                onClick = {
+                                    if (completedUris.isNotEmpty()) {
+                                        ShareHelper.shareImages(
+                                            context = context,
+                                            uris = completedUris,
+                                            mimeType = "image/*",
+                                            title = "Share Batch"
+                                        )
+                                    }
+                                },
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(46.dp),
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Icon(Icons.Filled.Share, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(Modifier.width(6.dp))
+                                Text("Share Batch", style = MaterialTheme.typography.labelMedium)
+                            }
+
+                            OutlinedButton(
+                                onClick = { viewModel.reset() },
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(46.dp),
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(Modifier.width(6.dp))
+                                Text("New Batch", style = MaterialTheme.typography.labelMedium)
+                            }
+                        }
+                    }
+                }
             }
         }
     }
 }
 
-private fun formatBytes(bytes: Long): String = when {
-    bytes < 1024 -> "$bytes B"
-    bytes < 1024 * 1024 -> String.format("%.1f KB", bytes / 1024.0)
-    else -> String.format("%.1f MB", bytes / (1024.0 * 1024.0))
+private fun formatBytes(bytes: Long): String {
+    return when {
+        bytes < 1024 -> "$bytes B"
+        bytes < 1024 * 1024 -> String.format("%.1f KB", bytes / 1024.0)
+        bytes < 1024 * 1024 * 1024 -> String.format("%.1f MB", bytes / (1024.0 * 1024.0))
+        else -> String.format("%.2f GB", bytes / (1024.0 * 1024.0 * 1024.0))
+    }
 }

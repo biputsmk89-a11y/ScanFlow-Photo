@@ -1,7 +1,11 @@
 package com.scanflow.photocompressor.ui.home
 
+import android.content.Intent
+import android.net.Uri
+import android.os.Parcelable
 import androidx.compose.animation.*
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -19,15 +23,25 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.scanflow.photocompressor.ui.components.OperationChip
+import coil.compose.AsyncImage
+import com.scanflow.photocompressor.domain.model.FeatureFlags
+import com.scanflow.photocompressor.ui.components.ScanFlowHeader
 import com.scanflow.photocompressor.ui.theme.*
+import com.scanflow.photocompressor.util.AnalyticsEvent
+import com.scanflow.photocompressor.util.AnalyticsLogger
 
 @Composable
 fun HomeScreen(
@@ -45,400 +59,687 @@ fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
     var isMoreToolsExpanded by remember { mutableStateOf(true) }
 
-    LazyColumn(
+    Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background),
-        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 20.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+            .background(MaterialTheme.colorScheme.background)
     ) {
-        // 1. Header: Photo Compressor / Image Tools
-        item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column {
-                    Text(
-                        text = "ScanFlow Photo",
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onBackground
-                    )
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = "Photo Compressor + Image Tools",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+        // Sticky Header (Google Stitch)
+        ScanFlowHeader(
+            title = "Home",
+            subtitle = "Photo Compressor + Tools",
+            onQuickActionClick = onNavigateToBatch
+        )
 
-                // Minimalist Offline Badge
-                Surface(
-                    shape = RoundedCornerShape(20.dp),
-                    color = MaterialTheme.colorScheme.primaryContainer,
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.Lock,
-                            contentDescription = null,
-                            modifier = Modifier.size(12.dp),
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                        Text(
-                            text = "100% Offline",
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                }
-            }
-        }
-
-        // 2. Primary Hero: [ Compress Photos ]
-        item {
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable {
-                        com.scanflow.photocompressor.util.AnalyticsLogger.logEvent(
-                            com.scanflow.photocompressor.util.AnalyticsEvent.TOOL_OPENED,
-                            mapOf("tool" to "compress")
-                        )
-                        onNavigateToCompress()
-                    },
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = Primary),
-                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-            ) {
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background),
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            // 1. Trust Pill & Privacy Assurance
+            item {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(20.dp),
+                        .padding(top = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Surface(
-                        shape = CircleShape,
-                        color = Color.White.copy(alpha = 0.2f),
-                        modifier = Modifier.size(48.dp)
+                        shape = RoundedCornerShape(9999.dp),
+                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
                     ) {
-                        Box(contentAlignment = Alignment.Center) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
                             Icon(
-                                imageVector = Icons.Filled.Compress,
-                                contentDescription = "Compress",
-                                tint = Color.White,
-                                modifier = Modifier.size(26.dp)
+                                imageVector = Icons.Filled.VerifiedUser,
+                                contentDescription = null,
+                                tint = Tertiary,
+                                modifier = Modifier.size(15.dp)
+                            )
+                            Text(
+                                text = "Private. Offline. Simple.",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                letterSpacing = 0.3.sp
                             )
                         }
                     }
 
-                    Spacer(modifier = Modifier.width(16.dp))
-
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "Compress Photos",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(8.dp)
+                                .clip(CircleShape)
+                                .background(Tertiary)
                         )
-                        Spacer(modifier = Modifier.height(2.dp))
                         Text(
-                            text = "Reduce file size with high visual quality",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Color.White.copy(alpha = 0.85f)
+                            text = "100% On-Device",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.outline,
+                            fontWeight = FontWeight.Medium
                         )
                     }
-
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                        contentDescription = "Go",
-                        tint = Color.White.copy(alpha = 0.9f),
-                        modifier = Modifier.size(20.dp)
-                    )
                 }
             }
-        }
 
-        // 3. Priority Visual Grid (2x2): Resize, Convert, Batch, Crop
-        item {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+            // 2. Hero: Main Photo Compression Card (Identik Google Stitch)
+            item {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(22.dp))
+                        .clickable {
+                            AnalyticsLogger.logEvent(
+                                AnalyticsEvent.TOOL_OPENED,
+                                mapOf("tool" to "compress")
+                            )
+                            onNavigateToCompress()
+                        },
+                    shape = RoundedCornerShape(22.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainerLowest
+                    ),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
                 ) {
-                    PrimaryGridCard(
-                        icon = Icons.Filled.AspectRatio,
-                        title = "Resize",
-                        subtitle = "Scale dimensions",
-                        onClick = {
-                            com.scanflow.photocompressor.util.AnalyticsLogger.logEvent(
-                                com.scanflow.photocompressor.util.AnalyticsEvent.TOOL_OPENED,
-                                mapOf("tool" to "resize")
-                            )
-                            onNavigateToResize()
-                        },
-                        modifier = Modifier.weight(1f)
-                    )
-                    PrimaryGridCard(
-                        icon = Icons.Filled.SwapHoriz,
-                        title = "Convert",
-                        subtitle = "JPG • PNG • WEBP",
-                        onClick = {
-                            com.scanflow.photocompressor.util.AnalyticsLogger.logEvent(
-                                com.scanflow.photocompressor.util.AnalyticsEvent.TOOL_OPENED,
-                                mapOf("tool" to "convert")
-                            )
-                            onNavigateToConvert()
-                        },
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    PrimaryGridCard(
-                        icon = Icons.Filled.PhotoLibrary,
-                        title = "Batch",
-                        subtitle = "Multi-photo queue",
-                        onClick = {
-                            com.scanflow.photocompressor.util.AnalyticsLogger.logEvent(
-                                com.scanflow.photocompressor.util.AnalyticsEvent.TOOL_OPENED,
-                                mapOf("tool" to "batch")
-                            )
-                            onNavigateToBatch()
-                        },
-                        modifier = Modifier.weight(1f)
-                    )
-                    PrimaryGridCard(
-                        icon = Icons.Filled.Crop,
-                        title = "Crop",
-                        subtitle = "Trim & aspect ratio",
-                        onClick = {
-                            com.scanflow.photocompressor.util.AnalyticsLogger.logEvent(
-                                com.scanflow.photocompressor.util.AnalyticsEvent.TOOL_OPENED,
-                                mapOf("tool" to "crop")
-                            )
-                            onNavigateToCrop()
-                        },
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-            }
-        }
-
-        // 4. Progressive Disclosure: More Tools (PDF • Passport • Social • WhatsApp)
-        item {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(14.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
-            ) {
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    // Header toggle
-                    Row(
+                    Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { isMoreToolsExpanded = !isMoreToolsExpanded }
-                            .padding(16.dp),
+                            .background(
+                                Brush.verticalGradient(
+                                    colors = listOf(
+                                        MaterialTheme.colorScheme.surfaceContainerLowest,
+                                        MaterialTheme.colorScheme.surfaceContainerLow
+                                    )
+                                )
+                            )
+                            .padding(20.dp)
+                    ) {
+                        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                            // Top Row: Icon + "Fast Mode" pill
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Surface(
+                                    shape = RoundedCornerShape(16.dp),
+                                    color = MaterialTheme.colorScheme.secondaryContainer,
+                                    modifier = Modifier.size(56.dp)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(
+                                            imageVector = Icons.Filled.Compress,
+                                            contentDescription = "Compress",
+                                            tint = Primary,
+                                            modifier = Modifier.size(32.dp)
+                                        )
+                                    }
+                                }
+
+                                Surface(
+                                    shape = RoundedCornerShape(9999.dp),
+                                    color = MaterialTheme.colorScheme.surfaceContainer,
+                                    border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                                ) {
+                                    Text(
+                                        text = "Fast Mode",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = Primary,
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                                    )
+                                }
+                            }
+
+                            // Title & Description
+                            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Text(
+                                    text = "Compress Photos",
+                                    style = MaterialTheme.typography.headlineMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    letterSpacing = (-0.5).sp
+                                )
+                                Text(
+                                    text = "Reduce file size quickly without complicated settings. Preserves visual detail flawlessly.",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    lineHeight = 20.sp
+                                )
+                            }
+
+                            // Visual Space Saved Indicator Preview
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = MaterialTheme.colorScheme.surfaceContainerLowest,
+                                border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(12.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                    ) {
+                                        Surface(
+                                            shape = RoundedCornerShape(8.dp),
+                                            color = MaterialTheme.colorScheme.surfaceContainer,
+                                            modifier = Modifier.size(34.dp)
+                                        ) {
+                                            Box(contentAlignment = Alignment.Center) {
+                                                Icon(
+                                                    imageVector = Icons.Filled.PhotoSizeSelectSmall,
+                                                    contentDescription = null,
+                                                    tint = Primary,
+                                                    modifier = Modifier.size(18.dp)
+                                                )
+                                            }
+                                        }
+                                        Column {
+                                            Text(
+                                                text = "Average savings",
+                                                style = MaterialTheme.typography.labelMedium,
+                                                fontWeight = FontWeight.SemiBold,
+                                                color = MaterialTheme.colorScheme.onSurface
+                                            )
+                                            Text(
+                                                text = "Up to 85% reduced",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.outline
+                                            )
+                                        }
+                                    }
+
+                                    Surface(
+                                        shape = RoundedCornerShape(9999.dp),
+                                        color = MaterialTheme.colorScheme.surfaceContainer
+                                    ) {
+                                        Text(
+                                            text = "~6.4 MB → 780 KB",
+                                            style = MaterialTheme.typography.labelMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Tertiary,
+                                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                                        )
+                                    }
+                                }
+                            }
+
+                            // Primary CTA Shutter Button
+                            Button(
+                                onClick = {
+                                    AnalyticsLogger.logEvent(
+                                        AnalyticsEvent.TOOL_OPENED,
+                                        mapOf("tool" to "compress_cta")
+                                    )
+                                    onNavigateToCompress()
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(54.dp),
+                                shape = RoundedCornerShape(14.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Primary,
+                                    contentColor = Color.White
+                                ),
+                                elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Filled.AddPhotoAlternate,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(22.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = "Select Photos",
+                                        style = MaterialTheme.typography.labelLarge,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Surface(
+                                        shape = RoundedCornerShape(9999.dp),
+                                        color = Color.White.copy(alpha = 0.18f)
+                                    ) {
+                                        Text(
+                                            text = "Zero Quality Loss",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = Color.White,
+                                            fontWeight = FontWeight.SemiBold,
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 3. Quick Tools Grid (2x2)
+            item {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Column {
-                            Text(
-                                text = "More Tools",
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = "PDF • Passport • Social • WhatsApp",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-
-                        val rotationAngle by animateFloatAsState(
-                            targetValue = if (isMoreToolsExpanded) 180f else 0f,
-                            label = "chevron_rotation"
+                        Text(
+                            text = "Quick Tools",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
                         )
-                        Icon(
-                            imageVector = Icons.Filled.KeyboardArrowDown,
-                            contentDescription = if (isMoreToolsExpanded) "Collapse" else "Expand",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier
-                                .size(22.dp)
-                                .rotate(rotationAngle)
+                        Text(
+                            text = "One-Tap Utility",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.outline
                         )
                     }
 
-                    // Expandable content
-                    AnimatedVisibility(
-                        visible = isMoreToolsExpanded,
-                        enter = expandVertically() + fadeIn(),
-                        exit = shrinkVertically() + fadeOut()
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
+                        StitchToolCard(
+                            icon = Icons.Filled.AspectRatio,
+                            title = "Resize",
+                            subtitle = "Change pixel dimensions",
+                            onClick = {
+                                AnalyticsLogger.logEvent(AnalyticsEvent.TOOL_OPENED, mapOf("tool" to "resize"))
+                                onNavigateToResize()
+                            },
+                            modifier = Modifier.weight(1f)
+                        )
+                        StitchToolCard(
+                            icon = Icons.Filled.Transform,
+                            title = "Convert",
+                            subtitle = "JPG, PNG, WEBP",
+                            onClick = {
+                                AnalyticsLogger.logEvent(AnalyticsEvent.TOOL_OPENED, mapOf("tool" to "convert"))
+                                onNavigateToConvert()
+                            },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        StitchToolCard(
+                            icon = Icons.Filled.Crop,
+                            title = "Crop",
+                            subtitle = "Aspect ratios & angles",
+                            onClick = {
+                                AnalyticsLogger.logEvent(AnalyticsEvent.TOOL_OPENED, mapOf("tool" to "crop"))
+                                onNavigateToCrop()
+                            },
+                            modifier = Modifier.weight(1f)
+                        )
+                        StitchToolCard(
+                            icon = Icons.Filled.CollectionsBookmark,
+                            title = "Batch",
+                            subtitle = "Process multiple photos",
+                            onClick = {
+                                AnalyticsLogger.logEvent(AnalyticsEvent.TOOL_OPENED, mapOf("tool" to "batch"))
+                                onNavigateToBatch()
+                            },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
+            }
+
+            // 4. Live Visual Insight Preview (Last Processed Photo)
+            val latestHistory = uiState.recentHistory.firstOrNull()
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainerLowest
+                    ),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Last Processed Photo",
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Surface(
+                                shape = RoundedCornerShape(9999.dp),
+                                color = MaterialTheme.colorScheme.surfaceContainer
+                            ) {
+                                val savedPct = latestHistory?.savedPercentage ?: 72.0
+                                Text(
+                                    text = "Saved ${String.format("%.0f", savedPct)}%",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Tertiary,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                )
+                            }
+                        }
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            // Image Thumbnail
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = MaterialTheme.colorScheme.surfaceContainer,
+                                modifier = Modifier
+                                    .size(64.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                            ) {
+                                if (latestHistory?.outputUri != null) {
+                                    val uri = runCatching { Uri.parse(latestHistory.outputUri) }.getOrNull()
+                                    AsyncImage(
+                                        model = uri,
+                                        contentDescription = "Recent photo",
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier.fillMaxSize()
+                                    )
+                                } else {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(
+                                            imageVector = Icons.Filled.PhotoLibrary,
+                                            contentDescription = null,
+                                            tint = Primary,
+                                            modifier = Modifier.size(28.dp)
+                                        )
+                                    }
+                                }
+                            }
+
+                            // Details
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = latestHistory?.inputFileName ?: "IMG_2024_FACADE.JPG",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    val origSize = latestHistory?.let { formatBytes(it.originalSize) } ?: "4.8 MB"
+                                    val resSize = latestHistory?.let { formatBytes(it.resultSize) } ?: "1.3 MB"
+                                    Text(
+                                        text = origSize,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.outline
+                                    )
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.outline,
+                                        modifier = Modifier.size(12.dp)
+                                    )
+                                    Text(
+                                        text = resSize,
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Primary
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = "Optimized for Web & Storage",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+
+                            // Share Action Button
+                            IconButton(
+                                onClick = {
+                                    val uri = latestHistory?.outputUri?.let { runCatching { Uri.parse(it) }.getOrNull() }
+                                    if (uri != null) {
+                                        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                            type = "image/*"
+                                            putExtra(Intent.EXTRA_STREAM, uri as Parcelable)
+                                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                        }
+                                        context.startActivity(Intent.createChooser(shareIntent, "Share Photo"))
+                                    } else {
+                                        onNavigateToCompress()
+                                    }
+                                },
+                                modifier = Modifier
+                                    .size(38.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.surfaceContainer)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.Share,
+                                    contentDescription = "Share",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 5. More Tools Section (Google Stitch Workflows)
+            item {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { isMoreToolsExpanded = !isMoreToolsExpanded },
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "More Tools",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text(
+                                text = if (isMoreToolsExpanded) "Hide" else "Show All",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Medium,
+                                color = Primary
+                            )
+                            Icon(
+                                imageVector = if (isMoreToolsExpanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
+                                contentDescription = null,
+                                tint = Primary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
+
+                    AnimatedVisibility(visible = isMoreToolsExpanded) {
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceContainerLowest
+                            ),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+                        ) {
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 8.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                                .padding(vertical = 4.dp)
                         ) {
-                            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f), thickness = 1.dp)
-
-                            if (com.scanflow.photocompressor.domain.model.FeatureFlags.ENABLE_PDF) {
-                                SecondaryToolRow(
+                            if (FeatureFlags.ENABLE_PDF) {
+                                StitchMoreToolRow(
                                     icon = Icons.Filled.PictureAsPdf,
-                                    title = "PDF Document",
-                                    description = "Convert multiple photos into a PDF file",
+                                    title = "PDF Document Maker",
+                                    description = "Combine images into compressed PDF",
                                     onClick = onNavigateToPdf
                                 )
+                                HorizontalDivider(
+                                    modifier = Modifier.padding(horizontal = 16.dp),
+                                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f),
+                                    thickness = 0.5.dp
+                                )
                             }
 
-                            if (com.scanflow.photocompressor.domain.model.FeatureFlags.ENABLE_PASSPORT) {
-                                SecondaryToolRow(
+                            if (FeatureFlags.ENABLE_PASSPORT) {
+                                StitchMoreToolRow(
                                     icon = Icons.Filled.Badge,
-                                    title = "Passport & ID Photo Studio",
-                                    description = "Framing, background color & print layouts",
+                                    title = "Passport & ID Studio",
+                                    description = "Standard 2x2 and biometric sizing",
                                     onClick = onNavigateToPassport
                                 )
+                                HorizontalDivider(
+                                    modifier = Modifier.padding(horizontal = 16.dp),
+                                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f),
+                                    thickness = 0.5.dp
+                                )
                             }
 
-                            if (com.scanflow.photocompressor.domain.model.FeatureFlags.ENABLE_SOCIAL) {
-                                SecondaryToolRow(
-                                    icon = Icons.Filled.Share,
-                                    title = "Social Media Sizes",
-                                    description = "Instagram, Facebook, YouTube, TikTok presets",
+                            if (FeatureFlags.ENABLE_SOCIAL) {
+                                StitchMoreToolRow(
+                                    icon = Icons.Filled.Feed,
+                                    title = "Social Media Sizer",
+                                    description = "Presets for Stories, Posts & Covers",
                                     onClick = onNavigateToSocial
                                 )
-                            }
-
-                            if (com.scanflow.photocompressor.domain.model.FeatureFlags.ENABLE_WHATSAPP) {
-                                SecondaryToolRow(
-                                    icon = Icons.AutoMirrored.Filled.Send,
-                                    title = "WhatsApp Ready",
-                                    description = "Small, Balanced, HD & custom optimization",
-                                    onClick = onNavigateToWhatsApp
+                                HorizontalDivider(
+                                    modifier = Modifier.padding(horizontal = 16.dp),
+                                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f),
+                                    thickness = 0.5.dp
                                 )
                             }
 
-                            SecondaryToolRow(
+                            if (FeatureFlags.ENABLE_WHATSAPP) {
+                                StitchMoreToolRow(
+                                    icon = Icons.Filled.Chat,
+                                    title = "WhatsApp Optimizer",
+                                    description = "Target strict 16MB chat boundaries",
+                                    onClick = onNavigateToWhatsApp
+                                )
+                                HorizontalDivider(
+                                    modifier = Modifier.padding(horizontal = 16.dp),
+                                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f),
+                                    thickness = 0.5.dp
+                                )
+                            }
+
+                            StitchMoreToolRow(
                                 icon = Icons.AutoMirrored.Filled.RotateRight,
                                 title = "Rotate & Flip",
                                 description = "90° rotation and orientation fix",
                                 onClick = onNavigateToRotate
                             )
+                            HorizontalDivider(
+                                modifier = Modifier.padding(horizontal = 16.dp),
+                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f),
+                                thickness = 0.5.dp
+                            )
 
-                            SecondaryToolRow(
+                            StitchMoreToolRow(
                                 icon = Icons.Filled.TextFields,
                                 title = "Watermark",
                                 description = "Protect photos with custom text",
                                 onClick = onNavigateToWatermark
                             )
-
-                            Spacer(modifier = Modifier.height(4.dp))
                         }
                     }
                 }
             }
         }
 
-        // 5. Recent Activity (Clean & Non-crowded)
-        if (uiState.recentHistory.isNotEmpty()) {
+            // 6. Bottom Local Processing Guarantee Note (Identik Google Stitch)
             item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                Surface(
+                    shape = RoundedCornerShape(14.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainer,
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(
-                        text = "Recent Activity",
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    if (uiState.totalSavedBytes > 0) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Lock,
+                            contentDescription = null,
+                            tint = Tertiary,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "Saved ${formatBytes(uiState.totalSavedBytes)}",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = Success,
-                            fontWeight = FontWeight.SemiBold
+                            text = "Processed locally on device. No cloud upload required.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontWeight = FontWeight.Medium
                         )
                     }
                 }
             }
 
-            items(uiState.recentHistory.take(3)) { history ->
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(14.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = history.inputFileName,
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.Medium,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                maxLines = 1
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                OperationChip(operationType = history.operation)
-                                Text(
-                                    text = "${formatBytes(history.originalSize)} → ${formatBytes(history.resultSize)}",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-                        if (history.savedPercentage > 0) {
-                            Text(
-                                text = "-${String.format("%.0f", history.savedPercentage)}%",
-                                style = MaterialTheme.typography.labelLarge,
-                                fontWeight = FontWeight.Bold,
-                                color = Success
-                            )
-                        }
-                    }
-                }
+            // Space for Bottom Navigation Bar
+            item {
+                Spacer(modifier = Modifier.height(24.dp))
             }
-        }
-
-        // Bottom space for bottom navigation bar
-        item {
-            Spacer(modifier = Modifier.height(72.dp))
         }
     }
 }
 
 /**
- * 2x2 Priority Grid Card:
- * Modern, Minimal, Surface #FFFFFF, Border #E2E8F0, Primary Accent #2563EB.
+ * 2x2 Quick Tool Card (Identik Google Stitch Layout)
  */
 @Composable
-private fun PrimaryGridCard(
+private fun StitchToolCard(
     icon: ImageVector,
     title: String,
     subtitle: String,
@@ -447,12 +748,15 @@ private fun PrimaryGridCard(
 ) {
     Card(
         modifier = modifier
-            .height(105.dp)
+            .height(132.dp)
+            .clip(RoundedCornerShape(16.dp))
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLowest
+        ),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Column(
             modifier = Modifier
@@ -461,32 +765,33 @@ private fun PrimaryGridCard(
             verticalArrangement = Arrangement.SpaceBetween
         ) {
             Surface(
-                shape = RoundedCornerShape(8.dp),
-                color = MaterialTheme.colorScheme.primaryContainer,
-                modifier = Modifier.size(34.dp)
+                shape = RoundedCornerShape(12.dp),
+                color = MaterialTheme.colorScheme.surfaceContainer,
+                modifier = Modifier.size(40.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
                         imageVector = icon,
                         contentDescription = title,
-                        modifier = Modifier.size(18.dp),
-                        tint = MaterialTheme.colorScheme.primary
+                        modifier = Modifier.size(22.dp),
+                        tint = Primary
                     )
                 }
             }
 
-            Column {
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
                     text = subtitle,
-                    style = MaterialTheme.typography.labelSmall,
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
         }
@@ -494,10 +799,10 @@ private fun PrimaryGridCard(
 }
 
 /**
- * Secondary tool row inside progressive disclosure.
+ * Row inside "More Tools" card (Identik Google Stitch)
  */
 @Composable
-private fun SecondaryToolRow(
+private fun StitchMoreToolRow(
     icon: ImageVector,
     title: String,
     description: String,
@@ -507,45 +812,52 @@ private fun SecondaryToolRow(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(vertical = 10.dp, horizontal = 4.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Surface(
-            shape = RoundedCornerShape(8.dp),
-            color = MaterialTheme.colorScheme.surfaceVariant,
-            modifier = Modifier.size(36.dp)
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
+            modifier = Modifier.weight(1f)
         ) {
-            Box(contentAlignment = Alignment.Center) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = title,
-                    modifier = Modifier.size(18.dp),
-                    tint = MaterialTheme.colorScheme.onSurface
+            Surface(
+                shape = RoundedCornerShape(10.dp),
+                color = MaterialTheme.colorScheme.surfaceContainer,
+                modifier = Modifier.size(38.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = title,
+                        tint = Secondary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+
+            Column {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
-        }
-
-        Spacer(modifier = Modifier.width(12.dp))
-
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Text(
-                text = description,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
         }
 
         Icon(
             imageVector = Icons.AutoMirrored.Filled.ArrowForward,
             contentDescription = null,
-            tint = MaterialTheme.colorScheme.outline,
-            modifier = Modifier.size(16.dp)
+            tint = MaterialTheme.colorScheme.outlineVariant,
+            modifier = Modifier.size(18.dp)
         )
     }
 }

@@ -1,13 +1,21 @@
 package com.scanflow.photocompressor.ui.social
 
+import android.content.Intent
+import android.net.Uri
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.*
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -19,27 +27,34 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil.compose.AsyncImage
 import com.scanflow.photocompressor.domain.model.SocialContentType
 import com.scanflow.photocompressor.domain.model.SocialPlatform
-import com.scanflow.photocompressor.ui.components.BeforeAfterPreview
-import com.scanflow.photocompressor.ui.components.ImagePickerCard
-import com.scanflow.photocompressor.ui.components.SafeImagePreview
-import com.scanflow.photocompressor.ui.preview.PreviewTier
-import com.scanflow.photocompressor.ui.theme.Success
-import com.scanflow.photocompressor.util.ReductionCalculator
+import com.scanflow.photocompressor.ui.components.ScanFlowHeader
+import com.scanflow.photocompressor.ui.theme.*
 import com.scanflow.photocompressor.util.ShareHelper
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SocialScreen(
     onNavigateBack: () -> Unit,
-    initialUri: android.net.Uri? = null,
+    initialUri: Uri? = null,
     viewModel: SocialViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    var dismissedResultUri by remember { mutableStateOf<Uri?>(null) }
+
+    val photoPicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            viewModel.selectImage(uri)
+        }
+    }
 
     LaunchedEffect(initialUri) {
         if (initialUri != null && uiState.selectedImageUri != initialUri) {
@@ -47,239 +62,397 @@ fun SocialScreen(
         }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Social Media Ready") },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
-                    }
+    // Success dialog
+    val activeResultUri = uiState.result?.outputUri?.takeIf { it != dismissedResultUri }
+    activeResultUri?.let { resUri ->
+        AlertDialog(
+            onDismissRequest = { dismissedResultUri = resUri },
+            title = {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(Icons.Filled.Verified, contentDescription = null, tint = Tertiary)
+                    Text("Optimized for Social Media", fontWeight = FontWeight.Bold)
                 }
-            )
-        }
-    ) { padding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            // 1. SELECT IMAGE
-            item {
-                Text(
-                    text = "1. Select Photo",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                ImagePickerCard(
-                    selectedImageUri = uiState.selectedImageUri,
-                    onImageSelected = { viewModel.selectImage(it) }
-                )
-            }
-
-            if (uiState.selectedImageUri != null) {
-                // 2. PLATFORM SELECTOR: Instagram, Facebook, TikTok, YouTube, LinkedIn, Custom
-                item {
-                    Text(
-                        text = "2. Select Platform",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    ScrollableTabRow(
-                        selectedTabIndex = SocialPlatform.values().indexOf(uiState.selectedPlatform),
-                        edgePadding = 0.dp
-                    ) {
-                        SocialPlatform.values().forEach { platform ->
-                            Tab(
-                                selected = uiState.selectedPlatform == platform,
-                                onClick = { viewModel.selectPlatform(platform) },
-                                text = {
-                                    Text(
-                                        text = platform.displayName,
-                                        style = MaterialTheme.typography.labelMedium,
-                                        fontWeight = if (uiState.selectedPlatform == platform) FontWeight.Bold else FontWeight.Normal
-                                    )
-                                }
-                            )
-                        }
-                    }
-                }
-
-                // 3. CONTENT TYPE SELECTOR: Post, Story, Cover, Thumbnail, Profile
-                // Do NOT force user to know pixel dimensions - configuration is internal preset
-                item {
-                    Text(
-                        text = "3. Select Content Type",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        items(SocialContentType.values()) { type ->
-                            FilterChip(
-                                selected = uiState.selectedType == type,
-                                onClick = { viewModel.selectType(type) },
-                                label = {
-                                    Text(
-                                        text = type.displayName,
-                                        fontWeight = if (uiState.selectedType == type) FontWeight.Bold else FontWeight.Medium,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        modifier = Modifier.padding(vertical = 4.dp, horizontal = 2.dp)
-                                    )
-                                }
-                            )
-                        }
-                    }
-                }
-
-                // 4. PREVIEW
-                item {
-                    Text(
-                        text = "4. Format Preview (${uiState.selectedPlatform.displayName} • ${uiState.selectedType.displayName})",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Box(
+            },
+            text = {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(240.dp)
+                            .height(200.dp)
                             .clip(RoundedCornerShape(12.dp))
-                            .background(Color.Black),
-                        contentAlignment = Alignment.Center
                     ) {
-                        SafeImagePreview(
-                            data = uiState.selectedImageUri,
-                            contentDescription = "Social Source",
-                            modifier = Modifier.fillMaxSize(),
-                            tier = PreviewTier.CARD_PREVIEW,
-                            contentScale = ContentScale.Fit
+                        AsyncImage(
+                            model = resUri,
+                            contentDescription = "Result Image",
+                            contentScale = ContentScale.Fit,
+                            modifier = Modifier.fillMaxSize()
                         )
                     }
-                }
-
-                // 5. COMPRESS QUALITY
-                item {
                     Text(
-                        text = "5. Quality: ${uiState.quality}%",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Slider(
-                        value = uiState.quality.toFloat(),
-                        onValueChange = { viewModel.updateQuality(it.toInt()) },
-                        valueRange = 10f..100f,
-                        steps = 17
+                        text = "Formatted for ${uiState.selectedPlatform.displayName} ${uiState.selectedType.displayName} (${uiState.currentPreset.targetWidth}×${uiState.currentPreset.targetHeight}).",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        try {
+                            val intent = Intent(Intent.ACTION_VIEW).apply {
+                                setDataAndType(resUri, "image/*")
+                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                            }
+                            context.startActivity(intent)
+                        } catch (e: Exception) {
+                            Toast.makeText(context, "No gallery app available", Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Primary)
+                ) {
+                    Text("Open Image")
+                }
+            },
+            dismissButton = {
+                OutlinedButton(
+                    onClick = {
+                        ShareHelper.shareImage(context, resUri, "image/jpeg", "Share Social Photo")
+                    }
+                ) {
+                    Icon(Icons.Filled.Share, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("Share")
+                }
+            }
+        )
+    }
 
-                // 6. PROCESS BUTTON
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
+        // Sticky Header (Google Stitch)
+        ScanFlowHeader(
+            title = "Social Media Sizer",
+            subtitle = "ScanFlow Foto",
+            onNavigateBack = onNavigateBack
+        )
+
+        Box(modifier = Modifier.fillMaxSize()) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(bottom = 76.dp),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                // Top Context Indicator
                 item {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Button(
-                        onClick = { viewModel.processSocialImage() },
-                        enabled = !uiState.isProcessing,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(52.dp),
-                        shape = RoundedCornerShape(14.dp)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        if (uiState.isProcessing) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(22.dp),
-                                color = MaterialTheme.colorScheme.onPrimary,
-                                strokeWidth = 2.dp
-                            )
-                            Spacer(modifier = Modifier.width(10.dp))
-                            Text("Processing via Image Pipeline...")
-                        } else {
-                            Icon(Icons.Filled.Share, contentDescription = null)
-                            Spacer(modifier = Modifier.width(8.dp))
+                        Surface(
+                            shape = RoundedCornerShape(9999.dp),
+                            color = MaterialTheme.colorScheme.surfaceContainerHigh
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.VerifiedUser,
+                                    contentDescription = null,
+                                    tint = Tertiary,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Text(
+                                    text = "Zero Compression Artifacts",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+
+                        Surface(
+                            shape = RoundedCornerShape(9999.dp),
+                            color = MaterialTheme.colorScheme.surfaceContainer
+                        ) {
                             Text(
-                                "Process for ${uiState.selectedPlatform.displayName} ${uiState.selectedType.displayName}",
-                                fontWeight = FontWeight.Bold
+                                text = "${uiState.currentPreset.targetWidth}×${uiState.currentPreset.targetHeight} px",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.SemiBold,
+                                color = Primary,
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
                             )
                         }
                     }
                 }
 
-                // RESULT CARD
-                val activeResult = uiState.result
-                if (activeResult != null) {
-                    item {
-                        val result = activeResult
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-                            shape = RoundedCornerShape(14.dp)
+                // Image Preview / Selection Card
+                item {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .aspectRatio(1.2f)
+                            .clip(RoundedCornerShape(16.dp))
+                            .clickable {
+                                photoPicker.launch(
+                                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                                )
+                            },
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(16.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                Icon(
-                                    Icons.Filled.CheckCircle,
-                                    contentDescription = null,
-                                    tint = Success,
-                                    modifier = Modifier.size(40.dp)
-                                )
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Text(
-                                    text = "Ready for ${uiState.selectedPlatform.displayName}!",
-                                    style = MaterialTheme.typography.titleSmall,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Text(
-                                    text = "${result.width} × ${result.height} px • ${ReductionCalculator.formatBytes(result.outputBytes)} • -${String.format("%.1f", result.reductionPercent)}%",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                            if (uiState.selectedImageUri != null) {
+                                AsyncImage(
+                                    model = uiState.selectedImageUri,
+                                    contentDescription = "Social Source",
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier.fillMaxSize()
                                 )
 
-                                Spacer(modifier = Modifier.height(14.dp))
-                                BeforeAfterPreview(
-                                    originalUri = uiState.selectedImageUri,
-                                    resultUri = result.outputUri,
-                                    originalSize = ReductionCalculator.formatBytes(result.originalBytes),
-                                    resultSize = "${result.width}×${result.height} (${ReductionCalculator.formatBytes(result.outputBytes)})",
-                                    savedPercentage = "-${String.format("%.1f", result.reductionPercent)}%"
-                                )
-
-                                Spacer(modifier = Modifier.height(14.dp))
-                                Button(
-                                    onClick = {
-                                        ShareHelper.shareImage(
-                                            context,
-                                            result.outputUri,
-                                            "image/jpeg",
-                                            "Share to ${uiState.selectedPlatform.displayName}"
-                                        )
-                                    },
-                                    modifier = Modifier.fillMaxWidth()
+                                Surface(
+                                    shape = RoundedCornerShape(9999.dp),
+                                    color = InverseSurface.copy(alpha = 0.85f),
+                                    modifier = Modifier
+                                        .align(Alignment.BottomCenter)
+                                        .padding(bottom = 12.dp)
                                 ) {
-                                    Icon(Icons.Filled.Share, null)
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text("Share to ${uiState.selectedPlatform.displayName}")
+                                    Text(
+                                        text = "${uiState.selectedPlatform.displayName} • ${uiState.selectedType.displayName}",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.White,
+                                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)
+                                    )
+                                }
+                            } else {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Filled.AddPhotoAlternate,
+                                        contentDescription = "Pick photo",
+                                        tint = Primary,
+                                        modifier = Modifier.size(44.dp)
+                                    )
+                                    Text(
+                                        text = "Tap to choose a photo for social sizing",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
                                 }
                             }
                         }
                     }
                 }
 
-                // ERROR MESSAGE
-                val error = uiState.errorMessage
-                if (error != null) {
-                    item {
+                // Platform Selector (Stitch horizontal cards)
+                item {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(
-                            text = error,
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodySmall
+                            text = "TARGET PLATFORM",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.sp,
+                            color = MaterialTheme.colorScheme.onSurface
                         )
+
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            items(SocialPlatform.values()) { platform ->
+                                val isSelected = uiState.selectedPlatform == platform
+                                Surface(
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = if (isSelected) Primary else MaterialTheme.colorScheme.surfaceContainerLowest,
+                                    border = BorderStroke(
+                                        1.dp,
+                                        if (isSelected) Primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+                                    ),
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .clickable { viewModel.selectPlatform(platform) }
+                                ) {
+                                    Text(
+                                        text = platform.displayName,
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                        color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface,
+                                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Content Type Selector (Post, Story, Cover, Thumbnail, Profile)
+                item {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            text = "CONTENT FORMAT",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.sp,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            items(SocialContentType.values()) { type ->
+                                val isSelected = uiState.selectedType == type
+                                Surface(
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = if (isSelected) Primary else MaterialTheme.colorScheme.surfaceContainerLowest,
+                                    border = BorderStroke(
+                                        1.dp,
+                                        if (isSelected) Primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+                                    ),
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .clickable { viewModel.selectType(type) }
+                                ) {
+                                    Text(
+                                        text = type.displayName,
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                        color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface,
+                                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Quality Adjustment
+                item {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "COMPRESSION QUALITY",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 1.sp,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "${uiState.quality}%",
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = Primary
+                            )
+                        }
+
+                        Slider(
+                            value = uiState.quality.toFloat(),
+                            onValueChange = { viewModel.updateQuality(it.toInt()) },
+                            valueRange = 50f..100f,
+                            steps = 10,
+                            colors = SliderDefaults.colors(
+                                thumbColor = Primary,
+                                activeTrackColor = Primary,
+                                inactiveTrackColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                            )
+                        )
+                    }
+                }
+
+                // Local Guarantee Note
+                item {
+                    Surface(
+                        shape = RoundedCornerShape(14.dp),
+                        color = MaterialTheme.colorScheme.surfaceContainerLow
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(Icons.Filled.Verified, contentDescription = null, tint = Tertiary, modifier = Modifier.size(18.dp))
+                            Text(
+                                text = "Optimized directly on device with zero cloud upload.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Fixed Sticky Bottom Bar
+            Surface(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth(),
+                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
+                tonalElevation = 4.dp
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 12.dp)
+                ) {
+                    Button(
+                        onClick = {
+                            if (uiState.selectedImageUri != null) {
+                                viewModel.processSocialImage()
+                            } else {
+                                photoPicker.launch(
+                                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                                )
+                            }
+                        },
+                        enabled = !uiState.isProcessing,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(52.dp),
+                        shape = RoundedCornerShape(14.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Primary),
+                        elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
+                    ) {
+                        if (uiState.isProcessing) {
+                            CircularProgressIndicator(
+                                color = Color.White,
+                                strokeWidth = 2.dp,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text("Sizing Photo...", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+                        } else {
+                            Icon(Icons.Filled.PhotoSizeSelectLarge, contentDescription = null, modifier = Modifier.size(20.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                text = "Export for ${uiState.selectedPlatform.displayName}",
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
                 }
             }

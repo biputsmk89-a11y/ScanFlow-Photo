@@ -1,8 +1,19 @@
-# ScanFlow Photo — Photo Compressor + Image Tools
+<p align="center">
+  <img src=".github/assets/banner.png" alt="ScanFlow Photo Banner" width="100%" />
+</p>
 
-A state-of-the-art, 100% offline Android photo utility built with Jetpack Compose, Kotlin Coroutines, and Clean Architecture.
+<p align="center">
+  <a href="https://github.com/biputsmk89-a11y/ScanFlow-Photo"><img src="https://img.shields.io/badge/Platform-Android-3DDC84.svg?style=flat&logo=android" alt="Android Platform" /></a>
+  <a href="https://kotlinlang.org"><img src="https://img.shields.io/badge/Kotlin-2.0.0-7F52FF.svg?style=flat&logo=kotlin" alt="Kotlin Version" /></a>
+  <a href="https://developer.android.com/jetpack/compose"><img src="https://img.shields.io/badge/Jetpack_Compose-Material_3-4285F4.svg?style=flat" alt="Jetpack Compose" /></a>
+  <img src="https://img.shields.io/badge/Architecture-Clean%20%2B%20MVI%2FMVVM-0E1728.svg?style=flat" alt="Clean Architecture" />
+  <img src="https://img.shields.io/badge/Privacy-100%25%20Offline-10B981.svg?style=flat" alt="100% Offline" />
+</p>
 
----
+# ScanFlow Photo — Photo Compressor + Image Studio
+
+A state-of-the-art, 100% offline Android photo utility built with Jetpack Compose, Material 3, Kotlin Coroutines, and Clean Architecture.
+
 
 ## 🌟 Key Features
 
