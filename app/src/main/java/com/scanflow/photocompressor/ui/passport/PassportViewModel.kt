@@ -1,20 +1,28 @@
 package com.scanflow.photocompressor.ui.passport
 
+import android.graphics.Bitmap
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.scanflow.photocompressor.data.storage.FileManager
 import com.scanflow.photocompressor.domain.model.*
+import com.scanflow.photocompressor.engine.BitmapUtils
 import com.scanflow.photocompressor.engine.PassportEngine
+import com.scanflow.photocompressor.engine.PortraitSegmentationEngine
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.io.FileOutputStream
 import javax.inject.Inject
 
 data class PassportUiState(
     val selectedImageUri: Uri? = null,
+    val cutoutUri: Uri? = null,
+    val isSegmenting: Boolean = false,
     val config: PassportConfig = PassportConfig(),
     val isProcessing: Boolean = false,
     val result: CompressionResult? = null,
@@ -23,15 +31,62 @@ data class PassportUiState(
 
 @HiltViewModel
 class PassportViewModel @Inject constructor(
-    private val passportEngine: PassportEngine
+    private val passportEngine: PassportEngine,
+    private val portraitSegmentationEngine: PortraitSegmentationEngine,
+    private val bitmapUtils: BitmapUtils,
+    private val fileManager: FileManager
 ) : ViewModel() {
+
+    var ioDispatcher: kotlinx.coroutines.CoroutineDispatcher = Dispatchers.IO
 
     private val _uiState = MutableStateFlow(PassportUiState())
     val uiState: StateFlow<PassportUiState> = _uiState.asStateFlow()
 
     fun selectImage(uri: Uri) {
         _uiState.update {
-            it.copy(selectedImageUri = uri, result = null, errorMessage = null)
+            it.copy(
+                selectedImageUri = uri,
+                cutoutUri = null,
+                isSegmenting = true,
+                result = null,
+                errorMessage = null
+            )
+        }
+
+        viewModelScope.launch {
+            try {
+                val cutoutUri = kotlinx.coroutines.withContext(ioDispatcher) {
+                    // Decode original image for on-device ML segmentation
+                    val originalBitmap = bitmapUtils.decodeBitmap(uri, 1200, 1200)
+                    val cutoutBitmap = portraitSegmentationEngine.removeBackground(originalBitmap)
+                    if (originalBitmap != cutoutBitmap) {
+                        originalBitmap.recycle()
+                    }
+
+                    // Cache transparent cutout PNG
+                    val tempFile = fileManager.createTempFile("passport_cutout_", "png")
+                    FileOutputStream(tempFile).use { out ->
+                        cutoutBitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+                    }
+                    cutoutBitmap.recycle()
+
+                    Uri.fromFile(tempFile)
+                }
+
+                _uiState.update {
+                    it.copy(
+                        cutoutUri = cutoutUri,
+                        isSegmenting = false
+                    )
+                }
+            } catch (e: Exception) {
+                // Graceful fallback to original image if segmentation encounters an error
+                _uiState.update {
+                    it.copy(
+                        isSegmenting = false
+                    )
+                }
+            }
         }
     }
 
@@ -121,7 +176,8 @@ class PassportViewModel @Inject constructor(
             val result = passportEngine.processPassportPhoto(
                 sourceUri = uri,
                 config = _uiState.value.config,
-                customCropRegion = customCropRegion
+                customCropRegion = customCropRegion,
+                cutoutUri = _uiState.value.cutoutUri
             )
 
             if (result.isSuccess) {

@@ -15,9 +15,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.automirrored.filled.RotateRight
-import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -627,11 +625,11 @@ fun HomeScreen(
                     AnimatedVisibility(visible = isMoreToolsExpanded) {
                         Card(
                             modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(16.dp),
+                            shape = RoundedCornerShape(20.dp),
                             colors = CardDefaults.cardColors(
                                 containerColor = MaterialTheme.colorScheme.surfaceContainerLowest
                             ),
-                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
                             elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
                         ) {
                         Column(
@@ -642,13 +640,14 @@ fun HomeScreen(
                             if (FeatureFlags.ENABLE_PDF) {
                                 StitchMoreToolRow(
                                     icon = Icons.Filled.PictureAsPdf,
+                                    iconBgColor = Color(0xFFEF4444),
                                     title = "PDF Document Maker",
                                     description = "Combine images into compressed PDF",
                                     onClick = onNavigateToPdf
                                 )
                                 HorizontalDivider(
-                                    modifier = Modifier.padding(horizontal = 16.dp),
-                                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f),
+                                    modifier = Modifier.padding(start = 66.dp, end = 16.dp),
+                                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.22f),
                                     thickness = 0.5.dp
                                 )
                             }
@@ -656,59 +655,66 @@ fun HomeScreen(
                             if (FeatureFlags.ENABLE_PASSPORT) {
                                 StitchMoreToolRow(
                                     icon = Icons.Filled.Badge,
+                                    iconBgColor = Color(0xFF4F46E5),
                                     title = "Passport & ID Studio",
                                     description = "Standard 2x2 and biometric sizing",
+                                    badgeText = "AI OFFLINE",
+                                    badgeColor = Color(0xFF4F46E5),
                                     onClick = onNavigateToPassport
                                 )
                                 HorizontalDivider(
-                                    modifier = Modifier.padding(horizontal = 16.dp),
-                                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f),
+                                    modifier = Modifier.padding(start = 66.dp, end = 16.dp),
+                                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.22f),
                                     thickness = 0.5.dp
                                 )
                             }
 
                             if (FeatureFlags.ENABLE_SOCIAL) {
                                 StitchMoreToolRow(
-                                    icon = Icons.Filled.Feed,
+                                    icon = Icons.AutoMirrored.Filled.Feed,
+                                    iconBgColor = Color(0xFFE1306C),
                                     title = "Social Media Sizer",
                                     description = "Presets for Stories, Posts & Covers",
                                     onClick = onNavigateToSocial
                                 )
                                 HorizontalDivider(
-                                    modifier = Modifier.padding(horizontal = 16.dp),
-                                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f),
+                                    modifier = Modifier.padding(start = 66.dp, end = 16.dp),
+                                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.22f),
                                     thickness = 0.5.dp
                                 )
                             }
 
                             if (FeatureFlags.ENABLE_WHATSAPP) {
                                 StitchMoreToolRow(
-                                    icon = Icons.Filled.Chat,
+                                    icon = Icons.AutoMirrored.Filled.Chat,
+                                    iconBgColor = Color(0xFF10B981),
                                     title = "WhatsApp Optimizer",
                                     description = "Target strict 16MB chat boundaries",
                                     onClick = onNavigateToWhatsApp
                                 )
                                 HorizontalDivider(
-                                    modifier = Modifier.padding(horizontal = 16.dp),
-                                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f),
+                                    modifier = Modifier.padding(start = 66.dp, end = 16.dp),
+                                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.22f),
                                     thickness = 0.5.dp
                                 )
                             }
 
                             StitchMoreToolRow(
                                 icon = Icons.AutoMirrored.Filled.RotateRight,
+                                iconBgColor = Color(0xFF0EA5E9),
                                 title = "Rotate & Flip",
                                 description = "90° rotation and orientation fix",
                                 onClick = onNavigateToRotate
                             )
                             HorizontalDivider(
-                                modifier = Modifier.padding(horizontal = 16.dp),
-                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f),
+                                modifier = Modifier.padding(start = 66.dp, end = 16.dp),
+                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.22f),
                                 thickness = 0.5.dp
                             )
 
                             StitchMoreToolRow(
                                 icon = Icons.Filled.TextFields,
+                                iconBgColor = Color(0xFFF59E0B),
                                 title = "Watermark",
                                 description = "Protect photos with custom text",
                                 onClick = onNavigateToWatermark
@@ -822,20 +828,24 @@ private fun StitchToolCard(
 }
 
 /**
- * Row inside "More Tools" card (Identik Google Stitch)
+ * Row inside "More Tools" card (iOS Settings & Shortcuts Aesthetic)
  */
 @Composable
 private fun StitchMoreToolRow(
     icon: ImageVector,
+    iconBgColor: Color,
+    iconTint: Color = Color.White,
     title: String,
     description: String,
+    badgeText: String? = null,
+    badgeColor: Color = MaterialTheme.colorScheme.primary,
     onClick: () -> Unit
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(horizontal = 16.dp, vertical = 11.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
@@ -846,30 +856,51 @@ private fun StitchMoreToolRow(
         ) {
             Surface(
                 shape = RoundedCornerShape(10.dp),
-                color = MaterialTheme.colorScheme.surfaceContainer,
-                modifier = Modifier.size(38.dp)
+                color = iconBgColor,
+                modifier = Modifier.size(36.dp),
+                shadowElevation = 0.5.dp
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
                         imageVector = icon,
                         contentDescription = title,
-                        tint = Secondary,
+                        tint = iconTint,
                         modifier = Modifier.size(20.dp)
                     )
                 }
             }
 
-            Column {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    if (badgeText != null) {
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = badgeColor.copy(alpha = 0.12f)
+                        ) {
+                            Text(
+                                text = badgeText,
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = badgeColor,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 1.dp),
+                                fontSize = 10.sp
+                            )
+                        }
+                    }
+                }
                 Text(
                     text = description,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.82f),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -877,9 +908,9 @@ private fun StitchMoreToolRow(
         }
 
         Icon(
-            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+            imageVector = Icons.Filled.ChevronRight,
             contentDescription = null,
-            tint = MaterialTheme.colorScheme.outlineVariant,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.40f),
             modifier = Modifier.size(18.dp)
         )
     }

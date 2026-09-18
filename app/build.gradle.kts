@@ -158,6 +158,9 @@ dependencies {
     // DataStore
     implementation(libs.androidx.datastore.preferences)
 
+    // ML Kit Selfie Segmentation (100% On-Device Offline Background Removal)
+    implementation("com.google.mlkit:segmentation-selfie:16.0.0-beta6")
+
     // Testing
     testImplementation(libs.junit)
     testImplementation(libs.mockk)

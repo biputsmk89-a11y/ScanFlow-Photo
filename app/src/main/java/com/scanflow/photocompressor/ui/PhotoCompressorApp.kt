@@ -67,45 +67,51 @@ fun PhotoCompressorApp(
     Scaffold(
         bottomBar = {
             if (showBottomBar) {
-                NavigationBar(
-                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
-                    tonalElevation = 2.dp
-                ) {
-                    Screen.bottomNavItems.forEach { screen ->
-                        val selected = navBackStackEntry?.destination?.hierarchy?.any {
-                            it.route == screen.route
-                        } == true
+                Column {
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f),
+                        thickness = 0.5.dp
+                    )
+                    NavigationBar(
+                        containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
+                        tonalElevation = 0.dp
+                    ) {
+                        Screen.bottomNavItems.forEach { screen ->
+                            val selected = navBackStackEntry?.destination?.hierarchy?.any {
+                                it.route == screen.route
+                            } == true
 
-                        NavigationBarItem(
-                            icon = {
-                                screen.icon?.let {
-                                    Icon(it, contentDescription = screen.title)
-                                }
-                            },
-                            label = {
-                                Text(
-                                    text = screen.title,
-                                    fontWeight = if (selected) androidx.compose.ui.text.font.FontWeight.Bold else androidx.compose.ui.text.font.FontWeight.Normal
-                                )
-                            },
-                            selected = selected,
-                            colors = NavigationBarItemDefaults.colors(
-                                selectedIconColor = com.scanflow.photocompressor.ui.theme.Primary,
-                                selectedTextColor = com.scanflow.photocompressor.ui.theme.Primary,
-                                indicatorColor = com.scanflow.photocompressor.ui.theme.Primary.copy(alpha = 0.12f),
-                                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
-                            ),
-                            onClick = {
-                                navController.navigate(screen.route) {
-                                    popUpTo(navController.graph.findStartDestination().id) {
-                                        saveState = true
+                            NavigationBarItem(
+                                icon = {
+                                    screen.icon?.let {
+                                        Icon(it, contentDescription = screen.title)
                                     }
-                                    launchSingleTop = true
-                                    restoreState = true
+                                },
+                                label = {
+                                    Text(
+                                        text = screen.title,
+                                        fontWeight = if (selected) androidx.compose.ui.text.font.FontWeight.SemiBold else androidx.compose.ui.text.font.FontWeight.Normal
+                                    )
+                                },
+                                selected = selected,
+                                colors = NavigationBarItemDefaults.colors(
+                                    selectedIconColor = androidx.compose.ui.graphics.Color(0xFF007AFF),
+                                    selectedTextColor = androidx.compose.ui.graphics.Color(0xFF007AFF),
+                                    indicatorColor = androidx.compose.ui.graphics.Color.Transparent,
+                                    unselectedIconColor = androidx.compose.ui.graphics.Color(0xFF8E8E93),
+                                    unselectedTextColor = androidx.compose.ui.graphics.Color(0xFF8E8E93)
+                                ),
+                                onClick = {
+                                    navController.navigate(screen.route) {
+                                        popUpTo(navController.graph.findStartDestination().id) {
+                                            saveState = true
+                                        }
+                                        launchSingleTop = true
+                                        restoreState = true
+                                    }
                                 }
-                            }
-                        )
+                            )
+                        }
                     }
                 }
             }

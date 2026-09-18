@@ -35,7 +35,8 @@ class PassportEngine @Inject constructor(
     private val bitmapUtils: BitmapUtils,
     private val fileManager: FileManager,
     private val imageRepository: ImageRepository,
-    private val historyRepository: HistoryRepository
+    private val historyRepository: HistoryRepository,
+    private val portraitSegmentationEngine: PortraitSegmentationEngine
 ) {
 
     /**
@@ -44,7 +45,8 @@ class PassportEngine @Inject constructor(
     suspend fun processPassportPhoto(
         sourceUri: Uri,
         config: PassportConfig,
-        customCropRegion: CropRegion? = null
+        customCropRegion: CropRegion? = null,
+        cutoutUri: Uri? = null
     ): Result<CompressionResult> = withContext(Dispatchers.IO) {
         try {
             // 1. CROP & RESIZE VIA CORE IMAGE PIPELINE
@@ -68,12 +70,16 @@ class PassportEngine @Inject constructor(
                 )
             )
 
+            val isCustomBg = config.effectiveBackgroundColor != null
+            val inputForPipeline = if (isCustomBg && cutoutUri != null) cutoutUri else sourceUri
+            val formatForPipeline = if (isCustomBg && cutoutUri != null) ImageFormat.PNG else ImageFormat.JPEG
+
             operations.add(ImageOperation.Compress(quality = 95))
-            operations.add(ImageOperation.Convert(ImageFormat.JPEG))
+            operations.add(ImageOperation.Convert(formatForPipeline))
 
             val pipeline = ImagePipeline(operations)
             val pipelineResult = imagePipelineEngine.execute(
-                inputUri = sourceUri,
+                inputUri = inputForPipeline,
                 pipeline = pipeline,
                 operationType = OperationType.CROP
             )
@@ -217,162 +223,17 @@ class PassportEngine @Inject constructor(
         }
     }
 
-    private fun applyBackgroundTintOrColor(bitmap: Bitmap, targetColor: Int): Bitmap {
-        val width = bitmap.width
-        val height = bitmap.height
-        val result = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-
+    private suspend fun applyBackgroundTintOrColor(bitmap: Bitmap, targetColor: Int): Bitmap {
         if (bitmap.hasAlpha()) {
+            val result = Bitmap.createBitmap(bitmap.width, bitmap.height, Bitmap.Config.ARGB_8888)
             val canvas = Canvas(result)
             canvas.drawColor(targetColor)
             canvas.drawBitmap(bitmap, 0f, 0f, null)
-        } else {
-            // Smart Offline Background Replacement
-            // Samples perimeter/corner backdrop color and replaces background pixels with targetColor
-            val pixels = IntArray(width * height)
-            bitmap.getPixels(pixels, 0, width, 0, 0, width, height)
-
-            // Sample corner patches (top-left, top-right)
-            val sampleRadius = (minOf(width, height) / 25).coerceIn(4, 16)
-            var sumR = 0L
-            var sumG = 0L
-            var sumB = 0L
-            var count = 0
-
-            // Sample top-left corner
-            for (y in 0 until sampleRadius) {
-                for (x in 0 until sampleRadius) {
-                    val p = pixels[y * width + x]
-                    sumR += Color.red(p)
-                    sumG += Color.green(p)
-                    sumB += Color.blue(p)
-                    count++
-                }
-            }
-            // Sample top-right corner
-            for (y in 0 until sampleRadius) {
-                for (x in (width - sampleRadius) until width) {
-                    val p = pixels[y * width + x]
-                    sumR += Color.red(p)
-                    sumG += Color.green(p)
-                    sumB += Color.blue(p)
-                    count++
-                }
-            }
-
-            val bgR = if (count > 0) (sumR / count).toInt() else 240
-            val bgG = if (count > 0) (sumG / count).toInt() else 240
-            val bgB = if (count > 0) (sumB / count).toInt() else 240
-
-            val targetR = Color.red(targetColor)
-            val targetG = Color.green(targetColor)
-            val targetB = Color.blue(targetColor)
-
-            // Color tolerance thresholds (Euclidean distance)
-            val tolerance = 48.0
-            val featherBand = 18.0
-
-            // Background mask using top-down flood connectivity from top border
-            val isBgMask = BooleanArray(width * height)
-            val queue = java.util.ArrayDeque<Int>()
-
-            // Seed queue from top row and outer top corners
-            for (x in 0 until width) {
-                val idx = x
-                val p = pixels[idx]
-                val dist = colorDistance(Color.red(p), Color.green(p), Color.blue(p), bgR, bgG, bgB)
-                if (dist <= tolerance + featherBand) {
-                    isBgMask[idx] = true
-                    queue.add(idx)
-                }
-            }
-
-            // Seed left and right borders in upper half
-            val halfHeight = height / 2
-            for (y in 0 until halfHeight) {
-                val leftIdx = y * width
-                if (!isBgMask[leftIdx]) {
-                    val p = pixels[leftIdx]
-                    if (colorDistance(Color.red(p), Color.green(p), Color.blue(p), bgR, bgG, bgB) <= tolerance + featherBand) {
-                        isBgMask[leftIdx] = true
-                        queue.add(leftIdx)
-                    }
-                }
-                val rightIdx = y * width + (width - 1)
-                if (!isBgMask[rightIdx]) {
-                    val p = pixels[rightIdx]
-                    if (colorDistance(Color.red(p), Color.green(p), Color.blue(p), bgR, bgG, bgB) <= tolerance + featherBand) {
-                        isBgMask[rightIdx] = true
-                        queue.add(rightIdx)
-                    }
-                }
-            }
-
-            // BFS flood fill to only replace connected background region (protects clothing/eyes)
-            val dx = intArrayOf(1, -1, 0, 0)
-            val dy = intArrayOf(0, 0, 1, -1)
-
-            while (!queue.isEmpty()) {
-                val curr = queue.removeFirst()
-                val cx = curr % width
-                val cy = curr / width
-
-                for (i in 0 until 4) {
-                    val nx = cx + dx[i]
-                    val ny = cy + dy[i]
-                    if (nx in 0 until width && ny in 0 until height) {
-                        val nIdx = ny * width + nx
-                        if (!isBgMask[nIdx]) {
-                            val p = pixels[nIdx]
-                            val dist = colorDistance(Color.red(p), Color.green(p), Color.blue(p), bgR, bgG, bgB)
-                            if (dist <= tolerance + featherBand) {
-                                isBgMask[nIdx] = true
-                                queue.add(nIdx)
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Apply background color replacement with feathering
-            for (i in pixels.indices) {
-                if (isBgMask[i]) {
-                    val p = pixels[i]
-                    val r = Color.red(p)
-                    val g = Color.green(p)
-                    val b = Color.blue(p)
-                    val dist = colorDistance(r, g, b, bgR, bgG, bgB)
-
-                    if (dist <= tolerance) {
-                        // 100% background replacement
-                        pixels[i] = Color.rgb(targetR, targetG, targetB)
-                    } else {
-                        // Feathered blending boundary
-                        val factor = ((dist - tolerance) / featherBand).coerceIn(0.0, 1.0).toFloat()
-                        val blendedR = (targetR * (1f - factor) + r * factor).toInt()
-                        val blendedG = (targetG * (1f - factor) + g * factor).toInt()
-                        val blendedB = (targetB * (1f - factor) + b * factor).toInt()
-                        pixels[i] = Color.rgb(blendedR, blendedG, blendedB)
-                    }
-                }
-            }
-
-            result.setPixels(pixels, 0, width, 0, 0, width, height)
-
-            // Draw crisp subtle 2px ID boundary border
-            val canvas = Canvas(result)
-            val borderPaint = Paint().apply {
-                color = targetColor
-                style = Paint.Style.STROKE
-                strokeWidth = 2f
-                isAntiAlias = true
-            }
-            canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), borderPaint)
-        }
-
-        if (result !== bitmap) {
             bitmap.recycle()
+            return result
         }
+        val result = portraitSegmentationEngine.replaceBackground(bitmap, targetColor)
+        bitmap.recycle()
         return result
     }
 
@@ -440,13 +301,6 @@ class PassportEngine @Inject constructor(
             bitmap.recycle()
         }
         return result
-    }
-
-    private fun colorDistance(r1: Int, g1: Int, b1: Int, r2: Int, g2: Int, b2: Int): Double {
-        val dr = (r1 - r2).toDouble()
-        val dg = (g1 - g2).toDouble()
-        val db = (b1 - b2).toDouble()
-        return kotlin.math.sqrt(dr * dr + dg * dg + db * db)
     }
 
     private fun composePrintSheet(photo: Bitmap, config: PassportConfig): Bitmap {

@@ -233,6 +233,12 @@ fun PassportScreen(
                 // Interactive Passport Frame Viewport (Stitch)
                 item {
                     val previewBgColor = uiState.config.effectiveBackgroundColor?.let { Color(it) } ?: Color.White
+                    val isStudioBackgroundActive = uiState.config.background != PassportBackground.ORIGINAL
+                    val displayImageUri = if (isStudioBackgroundActive && uiState.cutoutUri != null) {
+                        uiState.cutoutUri
+                    } else {
+                        uiState.selectedImageUri
+                    }
 
                     Card(
                         modifier = Modifier
@@ -246,7 +252,7 @@ fun PassportScreen(
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .background(previewBgColor)
+                                .background(if (isStudioBackgroundActive) previewBgColor else Color.Transparent)
                                 .clipToBounds()
                                 .pointerInput(Unit) {
                                     detectTransformGestures { _, pan, zoom, _ ->
@@ -256,9 +262,9 @@ fun PassportScreen(
                             contentAlignment = Alignment.Center
                         ) {
                             // Subject Photo
-                            if (uiState.selectedImageUri != null) {
+                            if (displayImageUri != null) {
                                 AsyncImage(
-                                    model = uiState.selectedImageUri,
+                                    model = displayImageUri,
                                     contentDescription = "Passport subject",
                                     contentScale = ContentScale.Crop,
                                     modifier = Modifier
@@ -292,6 +298,36 @@ fun PassportScreen(
                                         style = MaterialTheme.typography.labelMedium,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
+                                }
+                            }
+
+                            // AI Background Removal Progress Indicator
+                            if (uiState.isSegmenting) {
+                                Surface(
+                                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.90f),
+                                    shape = RoundedCornerShape(12.dp),
+                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+                                    modifier = Modifier
+                                        .align(Alignment.Center)
+                                        .padding(16.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                    ) {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(16.dp),
+                                            strokeWidth = 2.dp,
+                                            color = Primary
+                                        )
+                                        Text(
+                                            text = "Menyiapkan Studio Cutout (AI)...",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                    }
                                 }
                             }
 
@@ -570,7 +606,12 @@ fun PassportScreen(
                                     Text("Studio Background Tone", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
                                 }
                                 Surface(shape = RoundedCornerShape(6.dp), color = MaterialTheme.colorScheme.secondaryContainer) {
-                                    Text("Local Mask", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSecondaryContainer, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
+                                    val badgeText = when {
+                                        uiState.isSegmenting -> "AI Removing BG..."
+                                        uiState.cutoutUri != null -> "AI Studio Matte ✓"
+                                        else -> "100% Offline AI"
+                                    }
+                                    Text(badgeText, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSecondaryContainer, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
                                 }
                             }
 
