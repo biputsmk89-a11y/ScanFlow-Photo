@@ -234,10 +234,11 @@ fun PassportScreen(
                 item {
                     val previewBgColor = uiState.config.effectiveBackgroundColor?.let { Color(it) } ?: Color.White
                     val isStudioBackgroundActive = uiState.config.background != PassportBackground.ORIGINAL
-                    val displayImageUri = if (isStudioBackgroundActive && uiState.cutoutUri != null) {
-                        uiState.cutoutUri
-                    } else {
-                        uiState.selectedImageUri
+                    val displayImageUri = when (uiState.qaPreviewMode) {
+                        QaPreviewMode.ORIGINAL -> uiState.selectedImageUri
+                        QaPreviewMode.CHECKERBOARD, QaPreviewMode.COMPOSITE -> {
+                            if (isStudioBackgroundActive && uiState.cutoutUri != null) uiState.cutoutUri else uiState.selectedImageUri
+                        }
                     }
 
                     Card(
@@ -252,7 +253,13 @@ fun PassportScreen(
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .background(if (isStudioBackgroundActive) previewBgColor else Color.Transparent)
+                                .background(
+                                    when {
+                                        uiState.qaPreviewMode == QaPreviewMode.CHECKERBOARD -> Color(0xFFE2E8F0)
+                                        isStudioBackgroundActive -> previewBgColor
+                                        else -> Color.Transparent
+                                    }
+                                )
                                 .clipToBounds()
                                 .pointerInput(Unit) {
                                     detectTransformGestures { _, pan, zoom, _ ->
@@ -302,7 +309,7 @@ fun PassportScreen(
                             }
 
                             // AI Background Removal Progress Indicator
-                            if (uiState.isSegmenting) {
+                            if (uiState.isSegmenting || uiState.isProcessing) {
                                 Surface(
                                     color = MaterialTheme.colorScheme.surface.copy(alpha = 0.90f),
                                     shape = RoundedCornerShape(12.dp),
@@ -322,7 +329,11 @@ fun PassportScreen(
                                             color = Primary
                                         )
                                         Text(
-                                            text = "Menyiapkan Studio Cutout (AI)...",
+                                            text = if (uiState.stageProgressText.isNotEmpty()) {
+                                                uiState.stageProgressText
+                                            } else {
+                                                "Menyiapkan Studio Cutout (AI)..."
+                                            },
                                             style = MaterialTheme.typography.labelSmall,
                                             color = MaterialTheme.colorScheme.onSurface,
                                             fontWeight = FontWeight.SemiBold
@@ -445,6 +456,36 @@ fun PassportScreen(
                                         Icon(
                                             imageVector = if (areGuidesVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
                                             contentDescription = "Toggle Guides",
+                                            tint = Color.White,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
+                                }
+
+                                Surface(
+                                    shape = CircleShape,
+                                    color = InverseSurface.copy(alpha = 0.85f),
+                                    modifier = Modifier.clickable {
+                                        val next = when (uiState.qaPreviewMode) {
+                                            QaPreviewMode.COMPOSITE -> QaPreviewMode.ORIGINAL
+                                            QaPreviewMode.ORIGINAL -> QaPreviewMode.CHECKERBOARD
+                                            QaPreviewMode.CHECKERBOARD -> QaPreviewMode.COMPOSITE
+                                        }
+                                        viewModel.updateQaPreviewMode(next)
+                                    }
+                                ) {
+                                    Box(
+                                        contentAlignment = Alignment.Center,
+                                        modifier = Modifier.size(32.dp)
+                                    ) {
+                                        val icon = when (uiState.qaPreviewMode) {
+                                            QaPreviewMode.COMPOSITE -> Icons.Filled.Palette
+                                            QaPreviewMode.ORIGINAL -> Icons.Filled.Image
+                                            QaPreviewMode.CHECKERBOARD -> Icons.Filled.GridOn
+                                        }
+                                        Icon(
+                                            imageVector = icon,
+                                            contentDescription = "QA Preview Mode",
                                             tint = Color.White,
                                             modifier = Modifier.size(16.dp)
                                         )

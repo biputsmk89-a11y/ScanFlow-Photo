@@ -7,7 +7,7 @@ import androidx.compose.ui.graphics.Color
 // Project: ScanFlow Foto (1588260758899266927)
 // ==========================================
 
-val Background = Color(0xFFFAF8FF)
+val Background = Color(0xFFF8FAFC)
 val BackgroundCanvas = Color(0xFFF8FAFC)
 val Surface = Color(0xFFFFFFFF)
 val SurfaceDim = Color(0xFFD2D9F4)
@@ -15,64 +15,65 @@ val SurfaceBright = Color(0xFFFAF8FF)
 
 // Tonal Surface Containers
 val SurfaceContainerLowest = Color(0xFFFFFFFF)
-val SurfaceContainerLow = Color(0xFFF2F3FF)
-val SurfaceContainer = Color(0xFFEAEDFF)
-val SurfaceContainerHigh = Color(0xFFE2E7FF)
-val SurfaceContainerHighest = Color(0xFFDAE2FD)
+val SurfaceContainerLow = Color(0xFFF8FAFC)
+val SurfaceContainer = Color(0xFFF1F5F9)
+val SurfaceContainerHigh = Color(0xFFE2E8F0)
+val SurfaceContainerHighest = Color(0xFFCBD5E1)
 
 // Borders & Structural Delimiters
 val Border = Color(0xFFE2E8F0)
-val Outline = Color(0xFF737686)
-val OutlineVariant = Color(0xFFC3C6D7)
+val Outline = Color(0xFF94A3B8)
+val OutlineVariant = Color(0xFFE2E8F0)
 
-// Brand Primary Blue
+// Brand Primary Blue & ScanFlow Accent
 val Primary = Color(0xFF2563EB)              // High-confidence electric blue
-val PrimaryDark = Color(0xFF004AC6)          // Material Design token #004ac6
+val PrimaryDark = Color(0xFF1D4ED8)
 val PrimaryLight = Color(0xFF60A5FA)
 val PrimaryContainer = Color(0xFF2563EB)     // Shutter & Primary CTA fill
 val PrimaryContainerLight = Color(0xFFEFF6FF)
 val OnPrimary = Color(0xFFFFFFFF)
-val OnPrimaryContainer = Color(0xFFEEEFFF)
-val PrimaryFixed = Color(0xFFDBE1FF)
-val PrimaryFixedDim = Color(0xFFB4C5FF)
+val OnPrimaryContainer = Color(0xFFEFF6FF)
+val PrimaryFixed = Color(0xFFDBEAFE)
+val PrimaryFixedDim = Color(0xFFBFDBFE)
+val ScanFlowCyan = Color(0xFF0EA5E9)         // Subtle ScanFlow cyan accent
 
 // Secondary Slate Neutral
-val Secondary = Color(0xFF505F76)
-val SecondaryLight = Color(0xFF93C5FD)
-val SecondaryContainer = Color(0xFFD0E1FB)
+val Secondary = Color(0xFF475569)
+val SecondaryLight = Color(0xFF94A3B8)
+val SecondaryContainer = Color(0xFFE2E8F0)
 val OnSecondary = Color(0xFFFFFFFF)
-val OnSecondaryContainer = Color(0xFF54647A)
-val SecondaryFixed = Color(0xFFD3E4FE)
-val SecondaryFixedDim = Color(0xFFB7C8E1)
+val OnSecondaryContainer = Color(0xFF1E293B)
+val SecondaryFixed = Color(0xFFE2E8F0)
+val SecondaryFixedDim = Color(0xFFCBD5E1)
 
 // Tertiary Utility Green (Semantic success & auto-capture lock)
-val Tertiary = Color(0xFF007E37)
+val Tertiary = Color(0xFF16A34A)
 val TertiaryLight = Color(0xFF22C55E)
-val TertiaryContainer = Color(0xFF007E37)
+val TertiaryContainer = Color(0xFF16A34A)
 val TertiaryContainerLight = Color(0xFFDCFCE7)
 val OnTertiary = Color(0xFFFFFFFF)
 val OnTertiaryContainer = Color(0xFFC1FFC5)
-val TertiaryFixed = Color(0xFF6BFF8F)
-val TertiaryFixedDim = Color(0xFF4AE176)
+val TertiaryFixed = Color(0xFF86EFAC)
+val TertiaryFixedDim = Color(0xFF4ADE80)
 
 // Semantic Status Colors
-val Success = Color(0xFF22C55E)
-val SuccessLight = Color(0xFF4ADE80)
+val Success = Color(0xFF16A34A)
+val SuccessLight = Color(0xFF22C55E)
 val SuccessContainer = Color(0xFFDCFCE7)
 val Warning = Color(0xFFF59E0B)
 val WarningContainer = Color(0xFFFEF3C7)
-val Error = Color(0xFFBA1A1A)
-val ErrorContainer = Color(0xFFFFDAD6)
+val Error = Color(0xFFDC2626)
+val ErrorContainer = Color(0xFFFEE2E2)
 val OnError = Color(0xFFFFFFFF)
-val OnErrorContainer = Color(0xFF93000A)
+val OnErrorContainer = Color(0xFF991B1B)
 
 // Typographic Ink / Neutrals
 val TextPrimary = Color(0xFF0F172A)          // High contrast slate
-val TextSecondary = Color(0xFF64748B)        // Mid-tone slate
-val TextMuted = Color(0xFF94A3B8)
-val OnSurface = Color(0xFF131B2E)
-val OnSurfaceVariant = Color(0xFF434655)
-val InverseSurface = Color(0xFF283044)
+val TextSecondary = Color(0xFF475569)        // Legible mid-tone slate (not washed out)
+val TextMuted = Color(0xFF64748B)            // Muted label slate
+val OnSurface = Color(0xFF0F172A)
+val OnSurfaceVariant = Color(0xFF475569)
+val InverseSurface = Color(0xFF1E293B)
 val InverseOnSurface = Color(0xFFEEF0FF)
 
 // Surface Variant Fallback

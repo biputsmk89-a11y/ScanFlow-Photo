@@ -54,4 +54,9 @@ sealed interface ImageOperation {
     data class Watermark(
         val config: WatermarkConfig
     ) : ImageOperation
+
+    data class RemoveBackground(
+        val backgroundColor: Int? = null,
+        val options: com.scanflow.photocompressor.engine.backgroundremoval.BackgroundRemovalOptions = com.scanflow.photocompressor.engine.backgroundremoval.BackgroundRemovalOptions()
+    ) : ImageOperation
 }

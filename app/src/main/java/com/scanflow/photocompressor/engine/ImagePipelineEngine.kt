@@ -56,7 +56,8 @@ class ImagePipelineEngine @Inject constructor(
     private val metadataEngine: MetadataEngine? = null,
     private val fileManager: FileManager? = null,
     private val outputValidator: OutputValidator? = null,
-    private val fileNamingEngine: FileNamingEngine = FileNamingEngine()
+    private val fileNamingEngine: FileNamingEngine = FileNamingEngine(),
+    private val backgroundRemovalEngine: com.scanflow.photocompressor.engine.backgroundremoval.BackgroundRemovalEngine? = null
 ) {
 
     /**
@@ -111,6 +112,22 @@ class ImagePipelineEngine @Inject constructor(
                 if (flipped !== currentBitmap) {
                     currentBitmap.recycle()
                     currentBitmap = flipped
+                }
+            }
+
+            // =================================================================
+            // 2.5 STAGE: AI BACKGROUND REMOVAL (Skipped if not in operations)
+            // =================================================================
+            val bgOp = operations.filterIsInstance<ImageOperation.RemoveBackground>().firstOrNull()
+            if (bgOp != null && backgroundRemovalEngine != null) {
+                val processed = if (bgOp.backgroundColor != null) {
+                    backgroundRemovalEngine.replaceBackground(currentBitmap, bgOp.backgroundColor, bgOp.options)
+                } else {
+                    backgroundRemovalEngine.removeBackground(currentBitmap, bgOp.options)
+                }
+                if (processed !== currentBitmap) {
+                    currentBitmap.recycle()
+                    currentBitmap = processed
                 }
             }
 

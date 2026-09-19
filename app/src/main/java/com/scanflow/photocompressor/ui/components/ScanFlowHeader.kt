@@ -41,7 +41,7 @@ fun ScanFlowHeader(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(64.dp)
+                .height(56.dp)
                 .padding(horizontal = 16.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
@@ -49,13 +49,13 @@ fun ScanFlowHeader(
             // Left: Back button + Logo + Title
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
                 modifier = Modifier.weight(1f, fill = false)
             ) {
                 if (onNavigateBack != null) {
                     IconButton(
                         onClick = onNavigateBack,
-                        modifier = Modifier.size(40.dp)
+                        modifier = Modifier.size(36.dp)
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
@@ -69,7 +69,7 @@ fun ScanFlowHeader(
                     painter = painterResource(id = R.drawable.ic_scanflow_logo),
                     contentDescription = "ScanFlow Logo",
                     modifier = Modifier
-                        .size(36.dp)
+                        .size(32.dp)
                         .clip(RoundedCornerShape(8.dp))
                 )
 
@@ -85,13 +85,13 @@ fun ScanFlowHeader(
                             Text(
                                 text = "ScanFlow",
                                 style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.ExtraBold,
+                                fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
                                 text = " Foto",
                                 style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Normal,
+                                fontWeight = FontWeight.SemiBold,
                                 color = Primary
                             )
                         }
@@ -115,7 +115,7 @@ fun ScanFlowHeader(
                         Text(
                             text = subtitle,
                             style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )

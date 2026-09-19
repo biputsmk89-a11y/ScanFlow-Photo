@@ -95,7 +95,7 @@ fun WhatsAppScreen(
                         )
                     }
                     Text(
-                        text = "Your photo is optimized strictly within WhatsApp's 16MB file limit for zero transmission errors.",
+                        text = "Your photo is optimized for seamless WhatsApp sharing with balanced quality and fast transmission.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -176,7 +176,7 @@ fun WhatsAppScreen(
                                     modifier = Modifier.size(14.dp)
                                 )
                                 Text(
-                                    text = "Target Strict 16MB Boundary",
+                                    text = "Optimize photos for WhatsApp sharing",
                                     style = MaterialTheme.typography.labelSmall,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant

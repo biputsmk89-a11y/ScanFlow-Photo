@@ -65,25 +65,49 @@ fun HomeScreen(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
-        // Sticky Header (Google Stitch)
+        // Sticky Header (ScanFlow Minimal)
         ScanFlowHeader(
             title = "Home",
-            onQuickActionClick = onNavigateToBatch
+            subtitle = "Photo Compressor + Tools",
+            onQuickActionClick = onNavigateToBatch,
+            quickActionIcon = Icons.Filled.CollectionsBookmark
         )
 
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background),
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 10.dp, bottom = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            // 1. Hero: Main Photo Compression Card (Identik Google Stitch)
+            // 0. Privacy Badge
+            item {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.VerifiedUser,
+                        contentDescription = null,
+                        tint = Success,
+                        modifier = Modifier.size(15.dp)
+                    )
+                    Text(
+                        text = "Private • Offline • Simple",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            // 1. Hero: Main Photo Compression Card (Compact & Focused)
             item {
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(22.dp))
+                        .clip(RoundedCornerShape(20.dp))
                         .clickable {
                             AnalyticsLogger.logEvent(
                                 AnalyticsEvent.TOOL_OPENED,
@@ -91,7 +115,7 @@ fun HomeScreen(
                             )
                             onNavigateToCompress()
                         },
-                    shape = RoundedCornerShape(22.dp),
+                    shape = RoundedCornerShape(20.dp),
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surfaceContainerLowest
                     ),
@@ -109,63 +133,111 @@ fun HomeScreen(
                                     )
                                 )
                             )
-                            .padding(20.dp)
+                            .padding(16.dp)
                     ) {
-                        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                            // Top Row: Icon + "Fast Mode" pill
+                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            // Top Row: Icon + Status Indicator (Non-clickable)
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Surface(
-                                    shape = RoundedCornerShape(16.dp),
+                                    shape = RoundedCornerShape(14.dp),
                                     color = MaterialTheme.colorScheme.secondaryContainer,
-                                    modifier = Modifier.size(56.dp)
+                                    modifier = Modifier.size(48.dp)
                                 ) {
                                     Box(contentAlignment = Alignment.Center) {
                                         Icon(
                                             imageVector = Icons.Filled.Compress,
                                             contentDescription = "Compress",
                                             tint = Primary,
-                                            modifier = Modifier.size(32.dp)
+                                            modifier = Modifier.size(28.dp)
                                         )
                                     }
                                 }
 
                                 Surface(
                                     shape = RoundedCornerShape(9999.dp),
-                                    color = MaterialTheme.colorScheme.surfaceContainer,
-                                    border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                                    color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.7f),
+                                    border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
                                 ) {
-                                    Text(
-                                        text = "Fast Mode",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = Primary,
-                                        fontWeight = FontWeight.Bold,
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(5.dp),
                                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-                                    )
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(6.dp)
+                                                .background(Success, CircleShape)
+                                        )
+                                        Text(
+                                            text = "Local Engine",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                    }
                                 }
                             }
 
                             // Title & Description
-                            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                 Text(
                                     text = "Compress Photos",
-                                    style = MaterialTheme.typography.headlineMedium,
+                                    style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onSurface,
-                                    letterSpacing = (-0.5).sp
+                                    letterSpacing = (-0.3).sp
                                 )
                                 Text(
-                                    text = "Reduce file size quickly without complicated settings. Preserves visual detail flawlessly.",
+                                    text = "Make your photos smaller without complicated settings. Preserves visual detail.",
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    lineHeight = 20.sp
+                                    lineHeight = 19.sp
                                 )
                             }
 
-                            // Visual Space Saved Indicator Preview
+                            // Primary CTA Button
+                            Button(
+                                onClick = {
+                                    AnalyticsLogger.logEvent(
+                                        AnalyticsEvent.TOOL_OPENED,
+                                        mapOf("tool" to "compress_cta")
+                                    )
+                                    onNavigateToCompress()
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(48.dp),
+                                shape = RoundedCornerShape(12.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Primary,
+                                    contentColor = Color.White
+                                ),
+                                elevation = ButtonDefaults.buttonElevation(defaultElevation = 1.dp)
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Filled.AddPhotoAlternate,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = "Select Photos",
+                                        style = MaterialTheme.typography.labelLarge,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
+
+                            // Example result indicator
                             Surface(
                                 shape = RoundedCornerShape(12.dp),
                                 color = MaterialTheme.colorScheme.surfaceContainerLowest,
@@ -175,37 +247,37 @@ fun HomeScreen(
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(12.dp),
+                                        .padding(horizontal = 12.dp, vertical = 8.dp),
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Row(
                                         verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                                     ) {
                                         Surface(
                                             shape = RoundedCornerShape(8.dp),
                                             color = MaterialTheme.colorScheme.surfaceContainer,
-                                            modifier = Modifier.size(34.dp)
+                                            modifier = Modifier.size(30.dp)
                                         ) {
                                             Box(contentAlignment = Alignment.Center) {
                                                 Icon(
                                                     imageVector = Icons.Filled.PhotoSizeSelectSmall,
                                                     contentDescription = null,
                                                     tint = Primary,
-                                                    modifier = Modifier.size(18.dp)
+                                                    modifier = Modifier.size(16.dp)
                                                 )
                                             }
                                         }
                                         Column {
                                             Text(
-                                                text = "Average savings",
+                                                text = "Example result",
                                                 style = MaterialTheme.typography.labelMedium,
                                                 fontWeight = FontWeight.SemiBold,
                                                 color = MaterialTheme.colorScheme.onSurface
                                             )
                                             Text(
-                                                text = "Up to 85% reduced",
+                                                text = "Typical reduction ~85%",
                                                 style = MaterialTheme.typography.labelSmall,
                                                 color = MaterialTheme.colorScheme.outline
                                             )
@@ -217,62 +289,11 @@ fun HomeScreen(
                                         color = MaterialTheme.colorScheme.surfaceContainer
                                     ) {
                                         Text(
-                                            text = "~6.4 MB → 780 KB",
+                                            text = "6.4 MB → 780 KB",
                                             style = MaterialTheme.typography.labelMedium,
                                             fontWeight = FontWeight.Bold,
                                             color = Tertiary,
-                                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-                                        )
-                                    }
-                                }
-                            }
-
-                            // Primary CTA Shutter Button
-                            Button(
-                                onClick = {
-                                    AnalyticsLogger.logEvent(
-                                        AnalyticsEvent.TOOL_OPENED,
-                                        mapOf("tool" to "compress_cta")
-                                    )
-                                    onNavigateToCompress()
-                                },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(54.dp),
-                                shape = RoundedCornerShape(14.dp),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = Primary,
-                                    contentColor = Color.White
-                                ),
-                                elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.Center,
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Filled.AddPhotoAlternate,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(22.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text(
-                                        text = "Select Photos",
-                                        style = MaterialTheme.typography.labelLarge,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Surface(
-                                        shape = RoundedCornerShape(9999.dp),
-                                        color = Color.White.copy(alpha = 0.18f)
-                                    ) {
-                                        Text(
-                                            text = "Zero Quality Loss",
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = Color.White,
-                                            fontWeight = FontWeight.SemiBold,
-                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp)
                                         )
                                     }
                                 }
@@ -282,7 +303,7 @@ fun HomeScreen(
                 }
             }
 
-            // 3. Quick Tools Grid (2x2)
+            // 2. Quick Tools Grid (2x2)
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Row(
@@ -306,7 +327,7 @@ fun HomeScreen(
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         StitchToolCard(
                             icon = Icons.Filled.AspectRatio,
@@ -332,7 +353,7 @@ fun HomeScreen(
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         StitchToolCard(
                             icon = Icons.Filled.Crop,
@@ -569,7 +590,7 @@ fun HomeScreen(
                     AnimatedVisibility(visible = isMoreToolsExpanded) {
                         Card(
                             modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(20.dp),
+                            shape = RoundedCornerShape(16.dp),
                             colors = CardDefaults.cardColors(
                                 containerColor = MaterialTheme.colorScheme.surfaceContainerLowest
                             ),
@@ -601,7 +622,7 @@ fun HomeScreen(
                                     icon = Icons.Filled.Badge,
                                     iconBgColor = Color(0xFF4F46E5),
                                     title = "Passport & ID Studio",
-                                    description = "Standard 2x2 and biometric sizing",
+                                    description = "Passport, ID & visa photo sizes",
                                     badgeText = "AI OFFLINE",
                                     badgeColor = Color(0xFF4F46E5),
                                     onClick = onNavigateToPassport
@@ -633,7 +654,7 @@ fun HomeScreen(
                                     icon = Icons.AutoMirrored.Filled.Chat,
                                     iconBgColor = Color(0xFF10B981),
                                     title = "WhatsApp Optimizer",
-                                    description = "Target strict 16MB chat boundaries",
+                                    description = "Optimize photos for WhatsApp sharing",
                                     onClick = onNavigateToWhatsApp
                                 )
                                 HorizontalDivider(
@@ -690,7 +711,7 @@ private fun StitchToolCard(
 ) {
     Card(
         modifier = modifier
-            .height(132.dp)
+            .height(112.dp)
             .clip(RoundedCornerShape(16.dp))
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(16.dp),
@@ -703,25 +724,25 @@ private fun StitchToolCard(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(14.dp),
+                .padding(12.dp),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
             Surface(
-                shape = RoundedCornerShape(12.dp),
+                shape = RoundedCornerShape(10.dp),
                 color = MaterialTheme.colorScheme.surfaceContainer,
-                modifier = Modifier.size(40.dp)
+                modifier = Modifier.size(36.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
                         imageVector = icon,
                         contentDescription = title,
-                        modifier = Modifier.size(22.dp),
+                        modifier = Modifier.size(20.dp),
                         tint = Primary
                     )
                 }
             }
 
-            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
                 Text(
                     text = title,
                     style = MaterialTheme.typography.labelLarge,

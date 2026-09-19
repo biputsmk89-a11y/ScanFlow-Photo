@@ -1190,26 +1190,30 @@ private fun StitchCompressResultContent(
                                 verticalAlignment = Alignment.Bottom,
                                 horizontalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
-                                val displayPct = result.savedPercentage.coerceAtLeast(0.0)
-                                val statusLabel = if (result.savedPercentage > 0.0) "smaller" else "optimized"
+                                val savedPct = result.savedPercentage
+                                val (statusPctText, statusDescText, statusColor) = when {
+                                    savedPct > 0.05 -> Triple("${String.format("%.1f", savedPct)}%", "smaller", Tertiary)
+                                    savedPct < -0.05 -> Triple("${String.format("%.1f", -savedPct)}%", "larger", Warning)
+                                    else -> Triple("0.0%", "unchanged", MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
                                 Text(
-                                    text = "${String.format("%.1f", displayPct)}%",
+                                    text = statusPctText,
                                     style = MaterialTheme.typography.displaySmall,
                                     fontWeight = FontWeight.Bold,
                                     color = Primary
                                 )
                                 Text(
-                                    text = statusLabel,
+                                    text = statusDescText,
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold,
-                                    color = Tertiary
+                                    color = statusColor
                                 )
                             }
                         }
 
                         Surface(
                             shape = RoundedCornerShape(9999.dp),
-                            color = Tertiary
+                            color = if (result.savedBytes >= 0) Tertiary else Warning
                         ) {
                             Row(
                                 modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
@@ -1223,7 +1227,7 @@ private fun StitchCompressResultContent(
                                     modifier = Modifier.size(14.dp)
                                 )
                                 Text(
-                                    text = "Saved ${formatBytes(result.savedBytes)}",
+                                    text = if (result.savedBytes >= 0) "Saved ${formatBytes(result.savedBytes)}" else "Increased by ${formatBytes(-result.savedBytes)}",
                                     style = MaterialTheme.typography.labelSmall,
                                     fontWeight = FontWeight.Bold,
                                     color = Color.White
@@ -1262,7 +1266,7 @@ private fun StitchCompressResultContent(
                         }
 
                         Text(
-                            text = "Lossless Perception",
+                            text = "Preserves visual detail",
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.SemiBold,
                             color = Tertiary

@@ -95,11 +95,11 @@ fun PhotoCompressorApp(
                                 },
                                 selected = selected,
                                 colors = NavigationBarItemDefaults.colors(
-                                    selectedIconColor = androidx.compose.ui.graphics.Color(0xFF007AFF),
-                                    selectedTextColor = androidx.compose.ui.graphics.Color(0xFF007AFF),
-                                    indicatorColor = androidx.compose.ui.graphics.Color.Transparent,
-                                    unselectedIconColor = androidx.compose.ui.graphics.Color(0xFF8E8E93),
-                                    unselectedTextColor = androidx.compose.ui.graphics.Color(0xFF8E8E93)
+                                    selectedIconColor = com.scanflow.photocompressor.ui.theme.Primary,
+                                    selectedTextColor = com.scanflow.photocompressor.ui.theme.Primary,
+                                    indicatorColor = com.scanflow.photocompressor.ui.theme.Primary.copy(alpha = 0.12f),
+                                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
                                 ),
                                 onClick = {
                                     navController.navigate(screen.route) {

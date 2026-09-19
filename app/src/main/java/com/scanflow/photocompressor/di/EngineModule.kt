@@ -71,4 +71,12 @@ object EngineModule {
     ): PresetEngine {
         return PresetEngineImpl(presetRepository)
     }
+
+    @Provides
+    @Singleton
+    fun provideBackgroundRemovalEngine(
+        impl: com.scanflow.photocompressor.engine.backgroundremoval.MlKitSegmentationEngine
+    ): com.scanflow.photocompressor.engine.backgroundremoval.BackgroundRemovalEngine {
+        return impl
+    }
 }

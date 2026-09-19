@@ -9,6 +9,8 @@ import com.scanflow.photocompressor.domain.model.*
 import com.scanflow.photocompressor.engine.BitmapUtils
 import com.scanflow.photocompressor.engine.PassportEngine
 import com.scanflow.photocompressor.engine.PortraitSegmentationEngine
+import com.scanflow.photocompressor.engine.backgroundremoval.MaskEditStroke
+import com.scanflow.photocompressor.engine.backgroundremoval.MaskEditor
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,10 +21,32 @@ import kotlinx.coroutines.launch
 import java.io.FileOutputStream
 import javax.inject.Inject
 
+enum class PassportStage {
+    IDLE,
+    ANALYZE,
+    SEGMENT,
+    REFINE,
+    COMPOSITE,
+    RESIZE,
+    EXPORT
+}
+
+enum class QaPreviewMode {
+    COMPOSITE,
+    ORIGINAL,
+    CHECKERBOARD
+}
+
 data class PassportUiState(
     val selectedImageUri: Uri? = null,
     val cutoutUri: Uri? = null,
     val isSegmenting: Boolean = false,
+    val currentStage: PassportStage = PassportStage.IDLE,
+    val stageProgressText: String = "",
+    val qaPreviewMode: QaPreviewMode = QaPreviewMode.COMPOSITE,
+    val isRefining: Boolean = false,
+    val canUndoRefine: Boolean = false,
+    val canRedoRefine: Boolean = false,
     val config: PassportConfig = PassportConfig(),
     val isProcessing: Boolean = false,
     val result: CompressionResult? = null,
@@ -34,7 +58,8 @@ class PassportViewModel @Inject constructor(
     private val passportEngine: PassportEngine,
     private val portraitSegmentationEngine: PortraitSegmentationEngine,
     private val bitmapUtils: BitmapUtils,
-    private val fileManager: FileManager
+    private val fileManager: FileManager,
+    private val maskEditor: MaskEditor = MaskEditor()
 ) : ViewModel() {
 
     var ioDispatcher: kotlinx.coroutines.CoroutineDispatcher = Dispatchers.IO
@@ -48,6 +73,8 @@ class PassportViewModel @Inject constructor(
                 selectedImageUri = uri,
                 cutoutUri = null,
                 isSegmenting = true,
+                currentStage = PassportStage.ANALYZE,
+                stageProgressText = "Preparing photo...",
                 result = null,
                 errorMessage = null
             )
@@ -55,15 +82,29 @@ class PassportViewModel @Inject constructor(
 
         viewModelScope.launch {
             try {
+                _uiState.update {
+                    it.copy(
+                        currentStage = PassportStage.SEGMENT,
+                        stageProgressText = "Detecting subject (AI)..."
+                    )
+                }
+
                 val cutoutUri = kotlinx.coroutines.withContext(ioDispatcher) {
-                    // Decode original image for on-device ML segmentation
                     val originalBitmap = bitmapUtils.decodeBitmap(uri, 2048, 2048)
+
+                    _uiState.update {
+                        it.copy(
+                            currentStage = PassportStage.REFINE,
+                            stageProgressText = "Refining studio edges..."
+                        )
+                    }
+
                     val cutoutBitmap = portraitSegmentationEngine.removeBackground(originalBitmap)
                     if (originalBitmap != cutoutBitmap) {
                         originalBitmap.recycle()
                     }
 
-                    // Cache transparent cutout PNG
+                    // Cache transparent cutout PNG for instant color switching
                     val tempFile = fileManager.createTempFile("passport_cutout_", "png")
                     FileOutputStream(tempFile).use { out ->
                         cutoutBitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
@@ -76,14 +117,18 @@ class PassportViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         cutoutUri = cutoutUri,
-                        isSegmenting = false
+                        isSegmenting = false,
+                        currentStage = PassportStage.IDLE,
+                        stageProgressText = ""
                     )
                 }
             } catch (e: Exception) {
                 // Graceful fallback to original image if segmentation encounters an error
                 _uiState.update {
                     it.copy(
-                        isSegmenting = false
+                        isSegmenting = false,
+                        currentStage = PassportStage.IDLE,
+                        stageProgressText = ""
                     )
                 }
             }
@@ -134,6 +179,46 @@ class PassportViewModel @Inject constructor(
         _uiState.update { it.copy(config = it.config.copy(rotationDegrees = degrees), result = null) }
     }
 
+    fun updateQaPreviewMode(mode: QaPreviewMode) {
+        _uiState.update { it.copy(qaPreviewMode = mode) }
+    }
+
+    fun toggleRefineDialog(show: Boolean) {
+        _uiState.update { it.copy(isRefining = show) }
+    }
+
+    fun applyRefineStroke(stroke: MaskEditStroke) {
+        maskEditor.addStroke(stroke)
+        _uiState.update {
+            it.copy(
+                canUndoRefine = maskEditor.canUndo(),
+                canRedoRefine = maskEditor.canRedo()
+            )
+        }
+    }
+
+    fun undoRefine() {
+        if (maskEditor.undo()) {
+            _uiState.update {
+                it.copy(
+                    canUndoRefine = maskEditor.canUndo(),
+                    canRedoRefine = maskEditor.canRedo()
+                )
+            }
+        }
+    }
+
+    fun redoRefine() {
+        if (maskEditor.redo()) {
+            _uiState.update {
+                it.copy(
+                    canUndoRefine = maskEditor.canUndo(),
+                    canRedoRefine = maskEditor.canRedo()
+                )
+            }
+        }
+    }
+
     fun autoCenter() {
         _uiState.update {
             it.copy(
@@ -172,7 +257,15 @@ class PassportViewModel @Inject constructor(
         val uri = _uiState.value.selectedImageUri ?: return
 
         viewModelScope.launch {
-            _uiState.update { it.copy(isProcessing = true, errorMessage = null) }
+            _uiState.update {
+                it.copy(
+                    isProcessing = true,
+                    currentStage = PassportStage.COMPOSITE,
+                    stageProgressText = "Compositing studio background...",
+                    errorMessage = null
+                )
+            }
+
             val result = passportEngine.processPassportPhoto(
                 sourceUri = uri,
                 config = _uiState.value.config,
@@ -181,11 +274,20 @@ class PassportViewModel @Inject constructor(
             )
 
             if (result.isSuccess) {
-                _uiState.update { it.copy(isProcessing = false, result = result.getOrNull()) }
+                _uiState.update {
+                    it.copy(
+                        isProcessing = false,
+                        currentStage = PassportStage.IDLE,
+                        stageProgressText = "",
+                        result = result.getOrNull()
+                    )
+                }
             } else {
                 _uiState.update {
                     it.copy(
                         isProcessing = false,
+                        currentStage = PassportStage.IDLE,
+                        stageProgressText = "",
                         errorMessage = result.exceptionOrNull()?.message ?: "Failed to process passport photo"
                     )
                 }
