@@ -50,7 +50,12 @@ class RotateEngine @Inject constructor() {
 
             val result = Bitmap.createBitmap(newWidth, newHeight, bitmap.config ?: Bitmap.Config.ARGB_8888)
             val canvas = android.graphics.Canvas(result)
-            canvas.drawBitmap(bitmap, finalMatrix, null)
+            val paint = android.graphics.Paint(
+                android.graphics.Paint.ANTI_ALIAS_FLAG or
+                android.graphics.Paint.FILTER_BITMAP_FLAG or
+                android.graphics.Paint.DITHER_FLAG
+            )
+            canvas.drawBitmap(bitmap, finalMatrix, paint)
             result
         } else {
             Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)

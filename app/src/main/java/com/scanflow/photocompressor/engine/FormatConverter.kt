@@ -22,7 +22,12 @@ class FormatConverter @Inject constructor(
         val output = Bitmap.createBitmap(bitmap.width, bitmap.height, Bitmap.Config.ARGB_8888)
         val canvas = android.graphics.Canvas(output)
         canvas.drawColor(backgroundColor)
-        canvas.drawBitmap(bitmap, 0f, 0f, null)
+        val paint = android.graphics.Paint(
+            android.graphics.Paint.ANTI_ALIAS_FLAG or
+            android.graphics.Paint.FILTER_BITMAP_FLAG or
+            android.graphics.Paint.DITHER_FLAG
+        )
+        canvas.drawBitmap(bitmap, 0f, 0f, paint)
         return output
     }
 

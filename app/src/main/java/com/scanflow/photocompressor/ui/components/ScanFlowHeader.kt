@@ -7,8 +7,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -27,7 +25,7 @@ import com.scanflow.photocompressor.ui.theme.Primary
 @Composable
 fun ScanFlowHeader(
     title: String,
-    subtitle: String = "Photo Compressor + Tools",
+    subtitle: String? = null,
     onNavigateBack: (() -> Unit)? = null,
     onQuickActionClick: (() -> Unit)? = null,
     quickActionIcon: ImageVector = Icons.Filled.Tune,
@@ -75,7 +73,10 @@ fun ScanFlowHeader(
                         .clip(RoundedCornerShape(8.dp))
                 )
 
-                Column(modifier = Modifier.padding(start = 2.dp)) {
+                Column(
+                    modifier = Modifier.padding(start = 2.dp),
+                    verticalArrangement = Arrangement.Center
+                ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
@@ -110,56 +111,38 @@ fun ScanFlowHeader(
                             )
                         }
                     }
-                    Text(
-                        text = subtitle,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                    if (!subtitle.isNullOrBlank()) {
+                        Text(
+                            text = subtitle,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
                 }
             }
 
-            // Right: Quick Actions & Refined Subtle Profile Icon
+            // Right: Actions / Quick Action (without redundant user profile icon)
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 if (actions != null) {
                     actions()
-                } else {
-                    if (onQuickActionClick != null) {
-                        Surface(
-                            shape = CircleShape,
-                            color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.8f),
-                            modifier = Modifier.size(36.dp)
-                        ) {
-                            IconButton(
-                                onClick = onQuickActionClick,
-                                modifier = Modifier.fillMaxSize()
-                            ) {
-                                Icon(
-                                    imageVector = quickActionIcon,
-                                    contentDescription = "Quick Actions",
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            }
-                        }
-                    }
-
+                } else if (onQuickActionClick != null) {
                     Surface(
                         shape = CircleShape,
                         color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.8f),
                         modifier = Modifier.size(36.dp)
                     ) {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
+                        IconButton(
+                            onClick = onQuickActionClick,
+                            modifier = Modifier.fillMaxSize()
                         ) {
                             Icon(
-                                imageVector = Icons.Filled.Person,
-                                contentDescription = "Profile",
+                                imageVector = quickActionIcon,
+                                contentDescription = "Quick Actions",
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.size(18.dp)
                             )

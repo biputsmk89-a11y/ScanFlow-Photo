@@ -57,7 +57,7 @@ class PassportViewModel @Inject constructor(
             try {
                 val cutoutUri = kotlinx.coroutines.withContext(ioDispatcher) {
                     // Decode original image for on-device ML segmentation
-                    val originalBitmap = bitmapUtils.decodeBitmap(uri, 1200, 1200)
+                    val originalBitmap = bitmapUtils.decodeBitmap(uri, 2048, 2048)
                     val cutoutBitmap = portraitSegmentationEngine.removeBackground(originalBitmap)
                     if (originalBitmap != cutoutBitmap) {
                         originalBitmap.recycle()

@@ -74,7 +74,7 @@ class PassportEngine @Inject constructor(
             val inputForPipeline = if (isCustomBg && cutoutUri != null) cutoutUri else sourceUri
             val formatForPipeline = if (isCustomBg && cutoutUri != null) ImageFormat.PNG else ImageFormat.JPEG
 
-            operations.add(ImageOperation.Compress(quality = 95))
+            operations.add(ImageOperation.Compress(quality = 98))
             operations.add(ImageOperation.Convert(formatForPipeline))
 
             val pipeline = ImagePipeline(operations)
@@ -115,7 +115,7 @@ class PassportEngine @Inject constructor(
                         (passportBitmap.height / 2f) + config.panY
                     )
                 }
-                transformCanvas.drawBitmap(passportBitmap, matrix, Paint(Paint.FILTER_BITMAP_FLAG))
+                transformCanvas.drawBitmap(passportBitmap, matrix, Paint(Paint.FILTER_BITMAP_FLAG or Paint.ANTI_ALIAS_FLAG))
                 passportBitmap.recycle()
                 passportBitmap = transformed
             }
@@ -137,7 +137,7 @@ class PassportEngine @Inject constructor(
                 val tempFile = fileManager.createTempFile("passport_single_", "jpg")
                 try {
                     FileOutputStream(tempFile).use { out ->
-                        passportBitmap.compress(Bitmap.CompressFormat.JPEG, 95, out)
+                        passportBitmap.compress(Bitmap.CompressFormat.JPEG, 98, out)
                     }
                     val fileName = "passport_${config.spec.displayName.replace(" ", "_")}_${System.currentTimeMillis()}"
                     val finalSavedUri = imageRepository.saveFromFile(tempFile, fileName, ImageFormat.JPEG)
@@ -181,7 +181,7 @@ class PassportEngine @Inject constructor(
             val tempFile = fileManager.createTempFile("passport_sheet_", "jpg")
             try {
                 FileOutputStream(tempFile).use { out ->
-                    sheetBitmap.compress(Bitmap.CompressFormat.JPEG, 95, out)
+                    sheetBitmap.compress(Bitmap.CompressFormat.JPEG, 98, out)
                 }
                 val sheetWidth = sheetBitmap.width
                 val sheetHeight = sheetBitmap.height
@@ -228,7 +228,11 @@ class PassportEngine @Inject constructor(
             val result = Bitmap.createBitmap(bitmap.width, bitmap.height, Bitmap.Config.ARGB_8888)
             val canvas = Canvas(result)
             canvas.drawColor(targetColor)
-            canvas.drawBitmap(bitmap, 0f, 0f, null)
+            // Anti-aliased, filtered paint for smooth edge compositing
+            val compositePaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG).apply {
+                isDither = true
+            }
+            canvas.drawBitmap(bitmap, 0f, 0f, compositePaint)
             bitmap.recycle()
             return result
         }
@@ -245,8 +249,9 @@ class PassportEngine @Inject constructor(
         val result = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(result)
 
-        // Draw base bitmap
-        canvas.drawBitmap(bitmap, 0f, 0f, null)
+        // Draw base bitmap with anti-aliasing and filtering
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG or Paint.DITHER_FLAG)
+        canvas.drawBitmap(bitmap, 0f, 0f, paint)
 
         when (frameStyle) {
             IdFrameStyle.NONE -> { /* No op */ }
@@ -320,7 +325,7 @@ class PassportEngine @Inject constructor(
         val spacingX = (sheetWidth - (cols * pw)) / (cols + 1)
         val spacingY = (sheetHeight - (rows * ph)) / (rows + 1)
 
-        val photoPaint = Paint(Paint.FILTER_BITMAP_FLAG)
+        val photoPaint = Paint(Paint.FILTER_BITMAP_FLAG or Paint.ANTI_ALIAS_FLAG)
         val cutLinePaint = Paint().apply {
             color = Color.LTGRAY
             style = Paint.Style.STROKE

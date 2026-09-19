@@ -31,7 +31,8 @@ class WatermarkEngine @Inject constructor() {
         val scaledMargin = config.margin * scaleFactor.coerceAtLeast(1f)
 
         // Create paint for watermark text
-        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG or Paint.DITHER_FLAG).apply {
+            isSubpixelText = true
             color = config.color.toInt()
             alpha = (config.opacity * 255).toInt()
             textSize = scaledFontSize

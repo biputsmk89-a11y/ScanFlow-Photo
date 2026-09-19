@@ -54,7 +54,7 @@ class FormatConverterTest {
         assertEquals(800, result.width)
         assertEquals(600, result.height)
         verify { anyConstructed<Canvas>().drawColor(Color.WHITE) }
-        verify { anyConstructed<Canvas>().drawBitmap(alphaBitmap, 0f, 0f, null) }
+        verify { anyConstructed<Canvas>().drawBitmap(alphaBitmap, 0f, 0f, any()) }
     }
 
     @Test

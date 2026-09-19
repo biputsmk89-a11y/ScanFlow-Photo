@@ -64,32 +64,32 @@ enum class PassportSpec(
         description = "Standard 2 × 3 aspect ratio",
         ratioX = 2,
         ratioY = 3,
-        targetWidthPx = 400,
-        targetHeightPx = 600
+        targetWidthPx = 600,
+        targetHeightPx = 900
     ),
     PRESET_3X4(
         displayName = "3 × 4",
         description = "Standard 3 × 4 aspect ratio",
         ratioX = 3,
         ratioY = 4,
-        targetWidthPx = 450,
-        targetHeightPx = 600
+        targetWidthPx = 900,
+        targetHeightPx = 1200
     ),
     PRESET_4X6(
         displayName = "4 × 6",
         description = "Standard 4 × 6 aspect ratio",
         ratioX = 2,
         ratioY = 3,
-        targetWidthPx = 600,
-        targetHeightPx = 900
+        targetWidthPx = 800,
+        targetHeightPx = 1200
     ),
     CUSTOM(
         displayName = "Custom",
         description = "Custom aspect ratio",
         ratioX = 1,
         ratioY = 1,
-        targetWidthPx = 600,
-        targetHeightPx = 600
+        targetWidthPx = 800,
+        targetHeightPx = 800
     )
 }
 
@@ -246,22 +246,22 @@ enum class WhatsAppTier(
     SMALL(
         displayName = "Small",
         description = "Compact & fast sharing (low data usage)",
-        maxDimension = 800,
-        quality = 65,
+        maxDimension = 960,
+        quality = 70,
         targetSizeBytes = 200 * 1024L
     ),
     BALANCED(
         displayName = "Balanced",
         description = "Standard WhatsApp chat photo (Recommended)",
         maxDimension = 1280,
-        quality = 78,
+        quality = 80,
         targetSizeBytes = 500 * 1024L
     ),
     HIGH_QUALITY(
         displayName = "High Quality",
         description = "Maximum detail & HD photo clarity",
         maxDimension = 2048,
-        quality = 88,
+        quality = 90,
         targetSizeBytes = 1500 * 1024L
     ),
     CUSTOM(

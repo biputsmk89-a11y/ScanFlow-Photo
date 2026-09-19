@@ -47,7 +47,7 @@ class CompressionEngine @Inject constructor() {
         bitmap: Bitmap,
         format: ImageFormat,
         targetSizeBytes: Long,
-        minQuality: Int = 20,
+        minQuality: Int = 30,
         maxQuality: Int = 95,
         maxQualityIterations: Int = 7,
         maxDimensionReductions: Int = 3

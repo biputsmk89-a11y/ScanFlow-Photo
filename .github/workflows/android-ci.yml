@@ -45,6 +45,9 @@ jobs:
       - name: Assemble Debug APK
         run: ./gradlew assembleDebug --stacktrace
 
+      - name: Build Debug App Bundle (AAB)
+        run: ./gradlew bundleDebug --stacktrace
+
       - name: Upload Test Reports
         if: failure()
         uses: actions/upload-artifact@v4
@@ -69,4 +72,12 @@ jobs:
         with:
           name: android-debug-apk
           path: app/build/outputs/apk/debug/*.apk
+          retention-days: 3
+
+      - name: Upload Debug App Bundle (AAB)
+        uses: actions/upload-artifact@v4
+        continue-on-error: true
+        with:
+          name: android-debug-aab
+          path: app/build/outputs/bundle/debug/*.aab
           retention-days: 3

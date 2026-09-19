@@ -69,7 +69,6 @@ $fontTitle = New-Object System.Drawing.Font("Arial", 42, [System.Drawing.FontSty
 $fontSub = New-Object System.Drawing.Font("Arial", 22, [System.Drawing.FontStyle]::Regular)
 $brushWhite = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::White)
 $brushMuted = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(156, 163, 175))
-$brushCyan = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(37, 99, 235))
 $brushRed = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(220, 38, 38))
 $brushBlue = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(37, 99, 235))
 $brushCard = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(31, 41, 55))

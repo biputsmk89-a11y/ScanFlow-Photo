@@ -243,8 +243,7 @@ fun HistoryScreen(
     ) {
         // Sticky Header (Google Stitch)
         ScanFlowHeader(
-            title = "History",
-            subtitle = "Photo Compressor + Tools"
+            title = "History"
         )
 
         LazyColumn(
