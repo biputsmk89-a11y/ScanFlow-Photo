@@ -54,6 +54,7 @@ captures/
 # Keystore files
 *.jks
 *.keystore
+keystore.properties
 
 # Google Services / Sensitive secrets
 google-services.json

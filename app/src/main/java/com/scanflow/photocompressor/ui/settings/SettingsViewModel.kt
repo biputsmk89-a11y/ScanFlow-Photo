@@ -7,10 +7,9 @@ import com.scanflow.photocompressor.domain.model.AppPreferences
 import com.scanflow.photocompressor.domain.model.ConflictStrategy
 import com.scanflow.photocompressor.domain.model.ImageFormat
 import com.scanflow.photocompressor.domain.model.ThemeMode
-import com.scanflow.photocompressor.domain.billing.BillingConstants
-import com.scanflow.photocompressor.domain.billing.BillingManager
+import com.scanflow.photocompressor.domain.model.NamingPrefixType
+import com.scanflow.photocompressor.domain.model.FileNamingConfig
 import com.scanflow.photocompressor.domain.repository.PreferencesRepository
-import com.scanflow.photocompressor.domain.repository.UserTierRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -26,16 +25,13 @@ data class SettingsUiState(
     val outputFileCount: Int = 0,
     val availableStorage: String = "Calculating...",
     val outputDirectoryPath: String = "",
-    val isPro: Boolean = false,
     val message: String? = null
 )
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val fileManager: FileManager,
-    private val preferencesRepository: PreferencesRepository,
-    private val userTierRepository: UserTierRepository,
-    private val billingManager: BillingManager
+    private val preferencesRepository: PreferencesRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SettingsUiState())
@@ -44,15 +40,6 @@ class SettingsViewModel @Inject constructor(
     init {
         refreshStorageStats()
         observePreferences()
-        observeEntitlement()
-    }
-
-    private fun observeEntitlement() {
-        viewModelScope.launch {
-            userTierRepository.currentTier.collect { tier ->
-                _uiState.update { it.copy(isPro = (tier == com.scanflow.photocompressor.domain.model.UserTier.PRO)) }
-            }
-        }
     }
 
     private fun observePreferences() {
@@ -98,6 +85,27 @@ class SettingsViewModel @Inject constructor(
     fun setConflictStrategy(strategy: ConflictStrategy) {
         viewModelScope.launch {
             preferencesRepository.setConflictStrategy(strategy)
+        }
+    }
+
+    fun setNamingPrefixType(prefixType: NamingPrefixType) {
+        viewModelScope.launch {
+            val current = _uiState.value.preferences.namingConfig
+            preferencesRepository.setFileNamingConfig(current.copy(prefixType = prefixType))
+        }
+    }
+
+    fun setCustomPrefixText(text: String) {
+        viewModelScope.launch {
+            val current = _uiState.value.preferences.namingConfig
+            preferencesRepository.setFileNamingConfig(current.copy(customPrefixText = text))
+        }
+    }
+
+    fun setIncludeTimestamp(include: Boolean) {
+        viewModelScope.launch {
+            val current = _uiState.value.preferences.namingConfig
+            preferencesRepository.setFileNamingConfig(current.copy(includeTimestamp = include))
         }
     }
 

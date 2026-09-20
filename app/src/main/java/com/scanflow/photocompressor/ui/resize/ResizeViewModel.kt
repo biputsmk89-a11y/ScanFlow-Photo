@@ -6,8 +6,13 @@ import androidx.lifecycle.viewModelScope
 import com.scanflow.photocompressor.domain.model.*
 import com.scanflow.photocompressor.domain.repository.ImageRepository
 import com.scanflow.photocompressor.domain.usecase.ResizeImageUseCase
+import com.scanflow.photocompressor.domain.repository.PreferencesRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -38,11 +43,27 @@ data class ResizeUiState(
 @HiltViewModel
 class ResizeViewModel @Inject constructor(
     private val resizeImageUseCase: ResizeImageUseCase,
-    private val imageRepository: ImageRepository
+    private val imageRepository: ImageRepository,
+    private val preferencesRepository: PreferencesRepository? = null
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ResizeUiState())
     val uiState: StateFlow<ResizeUiState> = _uiState.asStateFlow()
+
+    init {
+        preferencesRepository?.let { repo ->
+            viewModelScope.launch {
+                repo.preferencesFlow.first().let { prefs ->
+                    _uiState.update { current ->
+                        current.copy(
+                            quality = prefs.defaultQuality,
+                            lockAspectRatio = prefs.behavior.keepAspectRatio
+                        )
+                    }
+                }
+            }
+        }
+    }
 
     fun selectImage(uri: Uri) {
         viewModelScope.launch {

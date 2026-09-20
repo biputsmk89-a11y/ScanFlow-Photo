@@ -32,6 +32,9 @@ class PreferencesRepositoryImpl @Inject constructor(
         val KEEP_ASPECT_RATIO = booleanPreferencesKey("keep_aspect_ratio")
         val AUTO_CLEAN_TEMP = booleanPreferencesKey("auto_clean_temp")
         val CONFLICT_STRATEGY = stringPreferencesKey("conflict_strategy")
+        val FILE_PREFIX_TYPE = stringPreferencesKey("file_prefix_type")
+        val CUSTOM_PREFIX_TEXT = stringPreferencesKey("custom_prefix_text")
+        val INCLUDE_TIMESTAMP = booleanPreferencesKey("include_timestamp")
     }
 
     override val preferencesFlow: Flow<AppPreferences> = dataStore.data
@@ -58,6 +61,11 @@ class PreferencesRepositoryImpl @Inject constructor(
             val strategyStr = preferences[PreferencesKeys.CONFLICT_STRATEGY] ?: ConflictStrategy.INCREMENT.name
             val conflictStrategy = runCatching { ConflictStrategy.valueOf(strategyStr) }.getOrDefault(ConflictStrategy.INCREMENT)
 
+            val prefixTypeStr = preferences[PreferencesKeys.FILE_PREFIX_TYPE] ?: com.scanflow.photocompressor.domain.model.NamingPrefixType.ORIGINAL.name
+            val prefixType = runCatching { com.scanflow.photocompressor.domain.model.NamingPrefixType.valueOf(prefixTypeStr) }.getOrDefault(com.scanflow.photocompressor.domain.model.NamingPrefixType.ORIGINAL)
+            val customPrefixText = preferences[PreferencesKeys.CUSTOM_PREFIX_TEXT] ?: "SCAN"
+            val includeTimestamp = preferences[PreferencesKeys.INCLUDE_TIMESTAMP] ?: false
+
             AppPreferences(
                 theme = themeMode,
                 defaultQuality = quality.coerceIn(1, 100),
@@ -67,6 +75,11 @@ class PreferencesRepositoryImpl @Inject constructor(
                     keepAspectRatio = keepAspectRatio,
                     autoCleanTemp = autoCleanTemp,
                     conflictStrategy = conflictStrategy
+                ),
+                namingConfig = com.scanflow.photocompressor.domain.model.FileNamingConfig(
+                    prefixType = prefixType,
+                    customPrefixText = customPrefixText,
+                    includeTimestamp = includeTimestamp
                 )
             )
         }
@@ -101,6 +114,14 @@ class PreferencesRepositoryImpl @Inject constructor(
     override suspend fun setConflictStrategy(strategy: ConflictStrategy) {
         dataStore.edit { preferences ->
             preferences[PreferencesKeys.CONFLICT_STRATEGY] = strategy.name
+        }
+    }
+
+    override suspend fun setFileNamingConfig(config: com.scanflow.photocompressor.domain.model.FileNamingConfig) {
+        dataStore.edit { preferences ->
+            preferences[PreferencesKeys.FILE_PREFIX_TYPE] = config.prefixType.name
+            preferences[PreferencesKeys.CUSTOM_PREFIX_TEXT] = config.customPrefixText
+            preferences[PreferencesKeys.INCLUDE_TIMESTAMP] = config.includeTimestamp
         }
     }
 

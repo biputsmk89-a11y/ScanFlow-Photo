@@ -1,59 +1,57 @@
 # Privacy Policy for ScanFlow Photo
 
-**Effective Date:** September 13, 2026  
-**Last Updated:** September 13, 2026  
-**Live URL for Google Play Console:** `https://biputsmk89-a11y.github.io/ScanFlow-Photo/privacy-policy.html`
+**Last updated:** September 20, 2026
+
+ScanFlow Photo ("we", "our", or "the app") is committed to protecting your privacy. This Privacy Policy explains our practices regarding data collection, usage, and disclosure when you use the ScanFlow Photo mobile application.
 
 ---
 
-## 1. Introduction
-ScanFlow Photo ("we", "our", or "the application") is committed to protecting your personal privacy. This Privacy Policy details our data handling practices and confirms that **ScanFlow Photo functions as a 100% offline, on-device application.**
+### 1. 100% On-Device Local Processing
+ScanFlow Photo is built from the ground up as an **offline-first, privacy-respecting utility**:
+- **All photo compression, resizing, format conversion, cropping, watermark application, and PDF generation are performed entirely on your device.**
+- We do **NOT** upload your photos, metadata, or documents to any remote servers, cloud infrastructure, or third parties.
+- Your photos and files never leave your device unless you explicitly choose to share them using your device's native share menu.
 
 ---
 
-## 2. Zero Data Collection Policy
-We believe your photos and files belong strictly to you. ScanFlow Photo:
-* **Does NOT collect, store, upload, or transmit any photos or image content.**
-* **Does NOT collect biometric data, facial geometry, or personal identifiers.**
-* **Does NOT use telemetry, usage trackers, or behavioral analytics.**
-* **Does NOT track user location, contacts, device identifiers (IMEI/MAC), or phone details.**
-* **Does NOT require user account registration or personal authentication.**
+### 2. Information We Do NOT Collect
+- We do **NOT** collect personally identifiable information (such as your name, email address, phone number, or physical location).
+- We do **NOT** collect biometric identifiers from photos. Any facial or subject detection (such as for passport photo background removal) uses on-device Google ML Kit models and runs strictly within device memory.
+- We do **NOT** sell, rent, monetize, or trade any user data or imagery.
 
 ---
 
-## 3. On-Device Image Processing
-All compression, resizing, conversion (JPEG, PNG, WebP), cropping, passport generation, and PDF export algorithms are executed completely inside your device's memory using local native Android APIs. 
+### 3. Device Permissions and How They Are Used
+ScanFlow Photo requests only the minimum permissions necessary to function:
 
-No image data is ever transferred across the internet or stored on external cloud infrastructure.
+- **Photos and Media / Storage (`READ_EXTERNAL_STORAGE` on Android 12 and below):**
+  Required strictly to allow you to select photos from your device gallery for compression and editing, and to save processed photos to your device storage. On Android 13 and above, the app utilizes the secure Android Photo Picker and MediaStore API without broad storage access.
+- **Camera (`android.permission.CAMERA`):**
+  Optional. Used solely when you tap the in-app camera button to capture a photo directly for compression or passport photo creation.
 
----
-
-## 4. Permissions & Android Scoped Storage
-ScanFlow Photo requests only the minimum set of permissions necessary to function:
-* **Read Images / Storage (`READ_MEDIA_IMAGES` / `READ_EXTERNAL_STORAGE`):** Required only to display your local photo library within the photo picker so you can select photos to edit.
-* **Write Images / Storage (`WRITE_EXTERNAL_STORAGE` on Android 9 and lower):** Required to save processed images and generated PDF files to your device's public `Pictures/ScanFlow` directory. On modern Android versions (Android 10+), standard MediaStore scoped storage is used without broad storage access.
-* **Camera (`android.permission.CAMERA`):** Optional. Used only when you choose to take a real-time photo within the ID/Passport capture screen.
+We do not request or use broad file manager permissions (`MANAGE_EXTERNAL_STORAGE`).
 
 ---
 
-## 5. In-App Purchases & Google Play Billing
-If you purchase the optional ScanFlow Pro upgrade or subscription:
-* Payments are processed directly through the **Google Play In-App Billing API**.
-* We do not handle, store, or receive your credit card numbers, billing addresses, or payment credentials.
-* Google LLC manages all billing interactions in accordance with the [Google Play Terms of Service](https://play.google.com/intl/en_us/about/play-terms/) and Google Privacy Policy.
+### 4. Third-Party Services & Libraries
+ScanFlow Photo uses trusted, industry-standard Android Jetpack libraries:
+- **Google ML Kit (Selfie Segmentation):** Executed locally on-device. No telemetry or images are transmitted.
+- **AndroidX & Material 3:** System UI and architecture components.
+- The app contains **no advertising SDKs, no behavioral trackers, and no third-party analytic networks.**
 
 ---
 
-## 6. Security
-Your photos remain strictly protected within the Android application sandbox. Because the application does not transmit data over the network, there is zero risk of remote intercept or cloud data leaks.
+### 5. Children's Privacy
+ScanFlow Photo does not knowingly collect personal information from children under the age of 13. The application is safe for general audiences of all ages.
 
 ---
 
-## 7. Open Source & Transparency
-The full source code of ScanFlow Photo is available for inspection and verification at:  
-[https://github.com/biputsmk89-a11y/ScanFlow-Photo](https://github.com/biputsmk89-a11y/ScanFlow-Photo)
+### 6. Changes to This Privacy Policy
+We may update our Privacy Policy periodically. Any updates will be reflected with a revised "Last updated" date at the top of this page.
 
 ---
 
-## 8. Contact
-If you have any questions or feedback regarding this Privacy Policy, please file an issue on GitHub or contact the maintainers via the repository issue tracker.
+### 7. Contact Us
+If you have any questions or suggestions regarding this Privacy Policy, please contact us at:
+- **Email:** support@scanflowphoto.com (or developer contact email)
+- **Developer Organization:** ScanFlow Photo Team

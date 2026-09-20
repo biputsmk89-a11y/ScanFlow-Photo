@@ -30,6 +30,39 @@ enum class ConflictStrategy {
 }
 
 /**
+ * Prefix presets for output file naming.
+ */
+enum class NamingPrefixType(val displayName: String, val prefix: String) {
+    ORIGINAL("Original Name", ""),
+    SCAN("ScanFlow (SCAN_)", "SCAN_"),
+    IMG("Camera (IMG_)", "IMG_"),
+    DOC("Document (DOC_)", "DOC_"),
+    CUSTOM("Custom", "")
+}
+
+/**
+ * Configuration for output file naming templates.
+ */
+data class FileNamingConfig(
+    val prefixType: NamingPrefixType = NamingPrefixType.ORIGINAL,
+    val customPrefixText: String = "SCAN",
+    val includeTimestamp: Boolean = false
+) {
+    fun getEffectivePrefix(baseOriginal: String): String {
+        return when (prefixType) {
+            NamingPrefixType.ORIGINAL -> baseOriginal
+            NamingPrefixType.SCAN -> "SCAN_${baseOriginal.removePrefix("SCAN_")}"
+            NamingPrefixType.IMG -> "IMG_${baseOriginal.removePrefix("IMG_")}"
+            NamingPrefixType.DOC -> "DOC_${baseOriginal.removePrefix("DOC_")}"
+            NamingPrefixType.CUSTOM -> {
+                val clean = customPrefixText.trim().replace(Regex("[^a-zA-Z0-9_-]"), "_")
+                if (clean.isNotBlank()) "${clean}_$baseOriginal" else baseOriginal
+            }
+        }
+    }
+}
+
+/**
  * Default behavior preferences for compression and processing.
  */
 data class DefaultBehavior(
@@ -46,5 +79,6 @@ data class AppPreferences(
     val theme: ThemeMode = ThemeMode.SYSTEM,
     val defaultQuality: Int = 80,
     val defaultFormat: ImageFormat = ImageFormat.JPEG,
-    val behavior: DefaultBehavior = DefaultBehavior()
+    val behavior: DefaultBehavior = DefaultBehavior(),
+    val namingConfig: FileNamingConfig = FileNamingConfig()
 )

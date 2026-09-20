@@ -274,7 +274,7 @@ fun SettingsScreen(
 
                         Column {
                             Text("Collision Resolution Strategy", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
-                            Text("Strategy when saving an output file with an existing name", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text("Applied when saving output files that share an existing name", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Spacer(Modifier.height(8.dp))
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
@@ -295,6 +295,93 @@ fun SettingsScreen(
                 }
             }
 
+            // File Naming & Scan Templates
+            item { Text("Scan & Output File Naming", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary) }
+
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                ) {
+                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Text("Filename Prefix Template", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            com.scanflow.photocompressor.domain.model.NamingPrefixType.values().forEach { prefixType ->
+                                val selected = uiState.preferences.namingConfig.prefixType == prefixType
+                                val shortLabel = when (prefixType) {
+                                    com.scanflow.photocompressor.domain.model.NamingPrefixType.ORIGINAL -> "Orig"
+                                    com.scanflow.photocompressor.domain.model.NamingPrefixType.SCAN -> "SCAN_"
+                                    com.scanflow.photocompressor.domain.model.NamingPrefixType.IMG -> "IMG_"
+                                    com.scanflow.photocompressor.domain.model.NamingPrefixType.DOC -> "DOC_"
+                                    com.scanflow.photocompressor.domain.model.NamingPrefixType.CUSTOM -> "Custom"
+                                }
+                                FilterChip(
+                                    selected = selected,
+                                    onClick = { viewModel.setNamingPrefixType(prefixType) },
+                                    label = { Text(shortLabel, style = MaterialTheme.typography.labelMedium) },
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                        }
+
+                        if (uiState.preferences.namingConfig.prefixType == com.scanflow.photocompressor.domain.model.NamingPrefixType.CUSTOM) {
+                            OutlinedTextField(
+                                value = uiState.preferences.namingConfig.customPrefixText,
+                                onValueChange = { viewModel.setCustomPrefixText(it) },
+                                label = { Text("Custom Prefix Text") },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column(Modifier.weight(1f)) {
+                                Text("Include Timestamp (Date/Time)", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                                Text("Appends YYYYMMDD_HHMMSS for archival organization", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            Switch(
+                                checked = uiState.preferences.namingConfig.includeTimestamp,
+                                onCheckedChange = { viewModel.setIncludeTimestamp(it) }
+                            )
+                        }
+
+                        // Live Naming Preview
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = MaterialTheme.colorScheme.surface,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            val sampleBase = uiState.preferences.namingConfig.getEffectivePrefix("photo")
+                            val timestampStr = if (uiState.preferences.namingConfig.includeTimestamp) "_20260920_200000" else ""
+                            val ext = uiState.preferences.defaultFormat.extension
+                            val previewName = "${sampleBase}${timestampStr}_compressed.$ext"
+                            Row(
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(Icons.Filled.Label, null, Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
+                                Spacer(Modifier.width(8.dp))
+                                Text(
+                                    text = "Preview: $previewName",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
             // Storage & Memory
             item { Text("Storage & Memory", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary) }
 
@@ -302,7 +389,18 @@ fun SettingsScreen(
                 SettingsItem(
                     icon = Icons.Filled.Folder,
                     title = "Output Storage",
-                    subtitle = "${uiState.outputFileCount} files saved (${uiState.outputDirSize})"
+                    subtitle = "${uiState.outputFileCount} files saved (${uiState.outputDirSize}) • Tap to open Gallery",
+                    onClick = {
+                        try {
+                            val intent = Intent(Intent.ACTION_VIEW).apply {
+                                setDataAndType(android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI, "image/*")
+                                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                            }
+                            context.startActivity(intent)
+                        } catch (e: Exception) {
+                            // Fallback
+                        }
+                    }
                 )
             }
             item {
@@ -321,16 +419,9 @@ fun SettingsScreen(
                 )
             }
 
-            // Privacy & Transparency
+            // Privacy & Legal
             item { Text("Privacy & Legal", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary) }
 
-            item {
-                SettingsItem(
-                    icon = Icons.Filled.Security,
-                    title = "100% Offline Processing",
-                    subtitle = "All compression & photo processing runs strictly on-device. Zero data collected."
-                )
-            }
             item {
                 SettingsItem(
                     icon = Icons.Filled.Policy,

@@ -22,8 +22,8 @@ val SurfaceContainerHighest = Color(0xFFCBD5E1)
 
 // Borders & Structural Delimiters
 val Border = Color(0xFFE2E8F0)
-val Outline = Color(0xFF94A3B8)
-val OutlineVariant = Color(0xFFE2E8F0)
+val Outline = Color(0xFF64748B)
+val OutlineVariant = Color(0xFFCBD5E1)
 
 // Brand Primary Blue & ScanFlow Accent
 val Primary = Color(0xFF2563EB)              // High-confidence electric blue

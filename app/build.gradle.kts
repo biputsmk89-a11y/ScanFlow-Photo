@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -13,8 +15,8 @@ android {
         applicationId = "com.scanflow.photocompressor"
         minSdk = 26
         targetSdk = 34
-        versionCode = 9
-        versionName = "1.0.8"
+        versionCode = 10
+        versionName = "1.1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -29,19 +31,32 @@ android {
 
     signingConfigs {
         create("release") {
-            val keystorePath = System.getenv("KEYSTORE_FILE")
+            val keystorePropertiesFile = rootProject.file("keystore.properties")
+            val keystoreProperties = Properties()
+            if (keystorePropertiesFile.exists()) {
+                keystorePropertiesFile.inputStream().use { stream ->
+                    keystoreProperties.load(stream)
+                }
+            }
+
+            val keystorePath = keystoreProperties.getProperty("KEYSTORE_FILE")
+                ?: System.getenv("KEYSTORE_FILE")
                 ?: (project.findProperty("KEYSTORE_FILE") as? String)
-            val storePass = System.getenv("KEYSTORE_PASSWORD")
+            val storePass = keystoreProperties.getProperty("KEYSTORE_PASSWORD")
+                ?: System.getenv("KEYSTORE_PASSWORD")
                 ?: (project.findProperty("KEYSTORE_PASSWORD") as? String)
-            val keyAl = System.getenv("KEY_ALIAS")
+            val keyAl = keystoreProperties.getProperty("KEY_ALIAS")
+                ?: System.getenv("KEY_ALIAS")
                 ?: (project.findProperty("KEY_ALIAS") as? String)
-            val keyPass = System.getenv("KEY_PASSWORD")
+            val keyPass = keystoreProperties.getProperty("KEY_PASSWORD")
+                ?: System.getenv("KEY_PASSWORD")
                 ?: (project.findProperty("KEY_PASSWORD") as? String)
 
             if (!keystorePath.isNullOrBlank()) {
-                val kFile = file(keystorePath)
-                if (kFile.exists() && !storePass.isNullOrBlank() && !keyAl.isNullOrBlank() && !keyPass.isNullOrBlank()) {
-                    storeFile = kFile
+                val kFile = rootProject.file(keystorePath)
+                val targetFile = if (kFile.exists()) kFile else file(keystorePath)
+                if (targetFile.exists() && !storePass.isNullOrBlank() && !keyAl.isNullOrBlank() && !keyPass.isNullOrBlank()) {
+                    storeFile = targetFile
                     storePassword = storePass
                     keyAlias = keyAl
                     keyPassword = keyPass

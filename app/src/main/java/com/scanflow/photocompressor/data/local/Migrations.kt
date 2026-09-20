@@ -66,8 +66,25 @@ object Migrations {
             )
 
             // 3. Drop legacy table and rename new table
-            db.execSQL("DROP TABLE `processing_history`")
+            db.execSQL("DROP TABLE IF EXISTS `processing_history`")
             db.execSQL("ALTER TABLE `processing_history_new` RENAME TO `processing_history`")
+
+            // 4. Ensure compression_presets table exists for PresetEntity
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS `compression_presets` (
+                    `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                    `name` TEXT NOT NULL,
+                    `quality` INTEGER NOT NULL,
+                    `maxWidth` INTEGER NOT NULL,
+                    `maxHeight` INTEGER NOT NULL,
+                    `format` TEXT NOT NULL,
+                    `preserveExif` INTEGER NOT NULL,
+                    `isDefault` INTEGER NOT NULL,
+                    `createdAt` INTEGER NOT NULL
+                )
+                """.trimIndent()
+            )
         }
     }
 }

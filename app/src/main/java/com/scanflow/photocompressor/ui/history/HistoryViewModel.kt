@@ -13,7 +13,8 @@ data class HistoryUiState(
     val historyList: List<ProcessingHistory> = emptyList(),
     val totalSavedBytes: Long = 0,
     val totalOperations: Int = 0,
-    val isLoading: Boolean = true
+    val isLoading: Boolean = true,
+    val userMessage: String? = null
 )
 
 @HiltViewModel
@@ -40,10 +41,20 @@ class HistoryViewModel @Inject constructor(
     }
 
     fun deleteEntry(id: String) {
-        viewModelScope.launch { getHistoryUseCase.deleteEntry(id) }
+        viewModelScope.launch {
+            getHistoryUseCase.deleteEntry(id)
+            _uiState.update { it.copy(userMessage = "Record removed from history") }
+        }
     }
 
     fun clearAll() {
-        viewModelScope.launch { getHistoryUseCase.clearAll() }
+        viewModelScope.launch {
+            getHistoryUseCase.clearAll()
+            _uiState.update { it.copy(userMessage = "All history records cleared") }
+        }
+    }
+
+    fun clearMessage() {
+        _uiState.update { it.copy(userMessage = null) }
     }
 }

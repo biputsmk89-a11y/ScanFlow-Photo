@@ -4,6 +4,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -78,7 +79,7 @@ fun OnboardingScreen(
     }
 
     Scaffold(
-        containerColor = Background,
+        containerColor = MaterialTheme.colorScheme.background,
         bottomBar = {
             OnboardingBottomBar(
                 currentPage = pagerState.currentPage,
@@ -143,7 +144,8 @@ private fun OnboardingWelcomePage() {
         // App Logo
         Card(
             shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(containerColor = Surface),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
             elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
             modifier = Modifier.size(96.dp)
         ) {
@@ -165,14 +167,14 @@ private fun OnboardingWelcomePage() {
 
         Surface(
             shape = RoundedCornerShape(12.dp),
-            color = PrimaryContainerLight,
+            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f),
             modifier = Modifier.padding(horizontal = 8.dp)
         ) {
             Text(
                 text = stringResource(id = R.string.onboarding_page1_tagline),
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.Bold,
-                color = Primary,
+                color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
             )
         }
@@ -197,7 +199,7 @@ private fun OnboardingWelcomePage() {
         Text(
             text = stringResource(id = R.string.onboarding_page1_secondary),
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.outline,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center
         )
     }
@@ -234,7 +236,8 @@ private fun OnboardingCompressPage() {
         // Before -> After Compression Showcase Card
         Card(
             shape = RoundedCornerShape(20.dp),
-            colors = CardDefaults.cardColors(containerColor = Surface),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
             elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
             modifier = Modifier.fillMaxWidth()
         ) {
@@ -252,7 +255,7 @@ private fun OnboardingCompressPage() {
                         Text(
                             text = stringResource(id = R.string.onboarding_page2_before_label),
                             style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.outline
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Text(
                             text = stringResource(id = R.string.onboarding_page2_before_val),
@@ -265,7 +268,7 @@ private fun OnboardingCompressPage() {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                         contentDescription = null,
-                        tint = Primary,
+                        tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(24.dp)
                     )
 
@@ -274,7 +277,7 @@ private fun OnboardingCompressPage() {
                         Text(
                             text = stringResource(id = R.string.onboarding_page2_after_label),
                             style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.outline
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Text(
                             text = stringResource(id = R.string.onboarding_page2_after_val),
@@ -288,7 +291,7 @@ private fun OnboardingCompressPage() {
                 // Space Saved Badge
                 Surface(
                     shape = RoundedCornerShape(10.dp),
-                    color = TertiaryContainerLight,
+                    color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.5f),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(
@@ -413,7 +416,10 @@ private fun ToolGridItem(
 ) {
     Card(
         shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(containerColor = Surface),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLowest
+        ),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
         modifier = modifier
     ) {
@@ -424,13 +430,13 @@ private fun ToolGridItem(
             Box(
                 modifier = Modifier
                     .size(36.dp)
-                    .background(PrimaryContainerLight, shape = RoundedCornerShape(10.dp)),
+                    .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f), shape = RoundedCornerShape(10.dp)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
-                    tint = Primary,
+                    tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(20.dp)
                 )
             }
@@ -438,7 +444,7 @@ private fun ToolGridItem(
             Text(
                 text = title,
                 style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.SemiBold,
+                fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface
             )
         }
@@ -458,7 +464,7 @@ private fun OnboardingPrivacyPage() {
         Box(
             modifier = Modifier
                 .size(80.dp)
-                .background(TertiaryContainerLight, shape = CircleShape),
+                .background(MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.5f), shape = CircleShape),
             contentAlignment = Alignment.Center
         ) {
             Icon(
@@ -512,7 +518,10 @@ private fun OnboardingPrivacyPage() {
 private fun PrivacyItem(icon: ImageVector, text: String) {
     Card(
         shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(containerColor = Surface),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLowest
+        ),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -523,13 +532,13 @@ private fun PrivacyItem(icon: ImageVector, text: String) {
             Box(
                 modifier = Modifier
                     .size(36.dp)
-                    .background(PrimaryContainerLight, shape = RoundedCornerShape(10.dp)),
+                    .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f), shape = RoundedCornerShape(10.dp)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
-                    tint = Primary,
+                    tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(20.dp)
                 )
             }
@@ -537,7 +546,7 @@ private fun PrivacyItem(icon: ImageVector, text: String) {
             Text(
                 text = text,
                 style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Medium,
+                fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface
             )
         }
@@ -558,7 +567,7 @@ private fun OnboardingBottomBar(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Background)
+            .background(MaterialTheme.colorScheme.background)
             .padding(horizontal = 24.dp, vertical = 20.dp)
     ) {
         if (currentPage < totalPages - 1) {
@@ -575,7 +584,7 @@ private fun OnboardingBottomBar(
                     Text(
                         text = stringResource(id = R.string.onboarding_skip),
                         style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.outline
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
 
@@ -590,7 +599,7 @@ private fun OnboardingBottomBar(
                     onClick = onNext,
                     enabled = !isNavigating,
                     shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Primary)
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                 ) {
                     Text(
                         text = stringResource(id = R.string.onboarding_next),
@@ -622,7 +631,7 @@ private fun OnboardingBottomBar(
                     onClick = onNext,
                     enabled = !isNavigating,
                     shape = RoundedCornerShape(14.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Primary),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(52.dp)

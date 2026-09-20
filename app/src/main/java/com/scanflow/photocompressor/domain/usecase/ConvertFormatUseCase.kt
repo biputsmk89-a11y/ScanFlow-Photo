@@ -6,6 +6,7 @@ import com.scanflow.photocompressor.domain.repository.HistoryRepository
 import com.scanflow.photocompressor.domain.repository.ImageRepository
 import com.scanflow.photocompressor.engine.FormatConverter
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
@@ -16,7 +17,8 @@ class ConvertFormatUseCase @Inject constructor(
     private val imageRepository: ImageRepository,
     private val historyRepository: HistoryRepository,
     private val formatConverter: FormatConverter,
-    private val imagePipelineEngine: com.scanflow.photocompressor.engine.ImagePipelineEngine? = null
+    private val imagePipelineEngine: com.scanflow.photocompressor.engine.ImagePipelineEngine? = null,
+    private val preferencesRepository: com.scanflow.photocompressor.domain.repository.PreferencesRepository? = null
 ) {
     suspend operator fun invoke(
         inputUri: Uri,
@@ -47,10 +49,14 @@ class ConvertFormatUseCase @Inject constructor(
                 bitmap
             }
 
+            val namingConfig = preferencesRepository?.preferencesFlow?.let { flow ->
+                runCatching { flow.first().namingConfig }.getOrNull()
+            }
             val outputFileName = com.scanflow.photocompressor.data.storage.FileNamingEngine().generateFileName(
                 originalName = imageInfo.fileName,
                 operationType = OperationType.CONVERT,
-                targetFormat = targetFormat
+                targetFormat = targetFormat,
+                namingConfig = namingConfig
             )
             val outputUri = imageRepository.saveBitmap(workingBitmap, outputFileName, targetFormat, quality)
             val outputSize = imageRepository.getFileSize(outputUri)

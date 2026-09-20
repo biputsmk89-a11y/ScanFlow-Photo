@@ -268,9 +268,7 @@ class UiFlowAndNavigationTest {
 
         val viewModel = SettingsViewModel(
             fileManager = mockk(relaxed = true),
-            preferencesRepository = prefsRepo,
-            userTierRepository = mockk(relaxed = true),
-            billingManager = mockk(relaxed = true)
+            preferencesRepository = prefsRepo
         )
         testScheduler.advanceUntilIdle()
 

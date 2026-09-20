@@ -177,6 +177,16 @@ fun PhotoCompressorApp(
                     onNavigateToEdit = { uri ->
                         activeToolInitialUri = uri
                         navController.navigate(Screen.Compress.route)
+                    },
+                    onNavigateToTool = { uri, tool ->
+                        activeToolInitialUri = uri
+                        val route = when (tool.lowercase()) {
+                            "resize" -> Screen.Resize.route
+                            "crop" -> Screen.Crop.route
+                            "convert" -> Screen.Convert.route
+                            else -> Screen.Compress.route
+                        }
+                        navController.navigate(route)
                     }
                 )
             }
@@ -188,8 +198,11 @@ fun PhotoCompressorApp(
             // Tool destinations
             composable(Screen.Compress.route) {
                 CompressScreen(
-                    initialUris = sharedUrisToHandle,
-                    onNavigateBack = { navController.popBackStack() },
+                    initialUris = activeToolInitialUri?.let { listOf(it) } ?: sharedUrisToHandle,
+                    onNavigateBack = {
+                        activeToolInitialUri = null
+                        navController.popBackStack()
+                    },
                     onNavigateToHistory = { navController.navigate(Screen.History.route) },
                     onNavigateToEdit = { uri ->
                         activeToolInitialUri = uri

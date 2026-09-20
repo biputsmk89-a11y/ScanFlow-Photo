@@ -3,6 +3,7 @@ package com.scanflow.photocompressor.domain.repository
 import com.scanflow.photocompressor.domain.model.AppPreferences
 import com.scanflow.photocompressor.domain.model.ConflictStrategy
 import com.scanflow.photocompressor.domain.model.DefaultBehavior
+import com.scanflow.photocompressor.domain.model.FileNamingConfig
 import com.scanflow.photocompressor.domain.model.ImageFormat
 import com.scanflow.photocompressor.domain.model.ThemeMode
 import kotlinx.coroutines.flow.Flow
@@ -40,6 +41,11 @@ interface PreferencesRepository {
      * Update conflict resolution strategy.
      */
     suspend fun setConflictStrategy(strategy: ConflictStrategy)
+
+    /**
+     * Update file naming configuration.
+     */
+    suspend fun setFileNamingConfig(config: FileNamingConfig)
 
     /**
      * Reset all settings to application defaults.

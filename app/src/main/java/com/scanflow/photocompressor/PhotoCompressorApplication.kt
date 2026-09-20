@@ -14,6 +14,29 @@ import dagger.hilt.android.HiltAndroidApp
 @HiltAndroidApp
 class PhotoCompressorApplication : Application(), ImageLoaderFactory {
 
+    override fun onCreate() {
+        super.onCreate()
+        setupGlobalCrashHandler()
+    }
+
+    private fun setupGlobalCrashHandler() {
+        val defaultHandler = Thread.getDefaultUncaughtExceptionHandler()
+        Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
+            try {
+                android.util.Log.e("PhotoCompressorApp", "FATAL CRASH on thread ${thread.name}: ${throwable.message}", throwable)
+                // Persist crash log to internal storage for diagnostic analysis
+                val crashFile = getFileStreamPath("last_crash.log")
+                crashFile?.outputStream()?.use { out ->
+                    out.write("Crash on thread ${thread.name}: ${throwable.message}\n${android.util.Log.getStackTraceString(throwable)}".toByteArray())
+                }
+            } catch (e: Exception) {
+                // Ignore logging failures to prevent secondary crashes
+            } finally {
+                defaultHandler?.uncaughtException(thread, throwable)
+            }
+        }
+    }
+
     override fun newImageLoader(): ImageLoader {
         return ImageLoader.Builder(this)
             .memoryCache {

@@ -30,6 +30,7 @@ class OutputFileFlowTest {
     private val bitmapUtils: BitmapUtils = mockk(relaxed = true)
     private val fileManager: FileManager = mockk(relaxed = true)
     private val outputValidator: OutputValidator = mockk(relaxed = true)
+    private val preferencesRepository: com.scanflow.photocompressor.domain.repository.PreferencesRepository = mockk(relaxed = true)
     private val fileNamingEngine: FileNamingEngine = FileNamingEngine()
 
     private lateinit var imageRepository: ImageRepositoryImpl
@@ -38,12 +39,14 @@ class OutputFileFlowTest {
     fun setup() {
         every { context.contentResolver } returns contentResolver
         every { context.getExternalFilesDir(any()) } returns tempFolder.root
+        io.mockk.every { preferencesRepository.preferencesFlow } returns kotlinx.coroutines.flow.flowOf(com.scanflow.photocompressor.domain.model.AppPreferences())
 
         imageRepository = ImageRepositoryImpl(
             context = context,
             bitmapUtils = bitmapUtils,
             fileManager = fileManager,
             outputValidator = outputValidator,
+            preferencesRepository = preferencesRepository,
             fileNamingEngine = fileNamingEngine
         )
     }

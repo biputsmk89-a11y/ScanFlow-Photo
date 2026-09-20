@@ -53,6 +53,7 @@ object AppModule {
             AppDatabase.DATABASE_NAME
         )
         .addMigrations(com.scanflow.photocompressor.data.local.Migrations.MIGRATION_1_2)
+        .fallbackToDestructiveMigration()
         .build()
     }
 

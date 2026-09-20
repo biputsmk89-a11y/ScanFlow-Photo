@@ -6,10 +6,12 @@ import androidx.lifecycle.viewModelScope
 import com.scanflow.photocompressor.domain.model.*
 import com.scanflow.photocompressor.domain.repository.ImageRepository
 import com.scanflow.photocompressor.domain.usecase.CompressImageUseCase
+import com.scanflow.photocompressor.domain.repository.PreferencesRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -17,13 +19,30 @@ import javax.inject.Inject
 @HiltViewModel
 class CompressViewModel @Inject constructor(
     private val compressImageUseCase: CompressImageUseCase,
-    private val imageRepository: ImageRepository
+    private val imageRepository: ImageRepository,
+    private val preferencesRepository: PreferencesRepository? = null
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(CompressUiState())
     val uiState: StateFlow<CompressUiState> = _uiState.asStateFlow()
 
     private var activeJob: kotlinx.coroutines.Job? = null
+
+    init {
+        preferencesRepository?.let { repo ->
+            viewModelScope.launch {
+                repo.preferencesFlow.first().let { prefs ->
+                    _uiState.update { current ->
+                        current.copy(
+                            quality = prefs.defaultQuality,
+                            format = prefs.defaultFormat,
+                            metadataOption = if (prefs.behavior.preserveExif) MetadataOption.KEEP_METADATA else MetadataOption.REMOVE_ALL
+                        )
+                    }
+                }
+            }
+        }
+    }
 
     fun selectImages(uris: List<Uri>) {
         if (uris.isEmpty()) return

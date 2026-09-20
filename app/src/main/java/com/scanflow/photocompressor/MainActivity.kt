@@ -44,8 +44,11 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
+        val startTime = System.currentTimeMillis()
         var isStateReady = false
-        splashScreen.setKeepOnScreenCondition { !isStateReady }
+        splashScreen.setKeepOnScreenCondition {
+            !isStateReady && (System.currentTimeMillis() - startTime < 1000L)
+        }
 
         handleIncomingIntent(intent)
 
@@ -68,14 +71,13 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    if (onboardingState != null) {
-                        PhotoCompressorApp(
-                            hasCompletedOnboarding = onboardingState?.hasCompleted == true,
-                            incomingSharedUris = incomingSharedUris.value,
-                            onSharedUrisHandled = { incomingSharedUris.value = null },
-                            onExitApp = { finish() }
-                        )
-                    }
+                    val completed = onboardingState?.hasCompleted ?: true
+                    PhotoCompressorApp(
+                        hasCompletedOnboarding = completed,
+                        incomingSharedUris = incomingSharedUris.value,
+                        onSharedUrisHandled = { incomingSharedUris.value = null },
+                        onExitApp = { finish() }
+                    )
                 }
             }
         }

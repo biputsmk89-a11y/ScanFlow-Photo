@@ -46,19 +46,29 @@ import java.util.*
 @Composable
 fun HistoryScreen(
     onNavigateToEdit: ((Uri) -> Unit)? = null,
+    onNavigateToTool: ((Uri, String) -> Unit)? = null,
     viewModel: HistoryViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val snackbarHostState = remember { SnackbarHostState() }
     var showClearDialog by remember { mutableStateOf(false) }
+    var entryToDelete by remember { mutableStateOf<ProcessingHistory?>(null) }
     var selectedEntry by remember { mutableStateOf<ProcessingHistory?>(null) }
     var searchQuery by remember { mutableStateOf("") }
-    var selectedFilter by remember { mutableStateOf("all") } // "all", "compress", "batch", "resize", "pdf"
+    var selectedFilter by remember { mutableStateOf("all") }
+
+    LaunchedEffect(uiState.userMessage) {
+        uiState.userMessage?.let { msg ->
+            snackbarHostState.showSnackbar(msg)
+            viewModel.clearMessage()
+        }
+    }
 
     if (showClearDialog) {
         AlertDialog(
             onDismissRequest = { showClearDialog = false },
-            title = { Text("Clear History", fontWeight = FontWeight.Bold) },
+            title = { Text("Clear All History", fontWeight = FontWeight.Bold) },
             text = { Text("Are you sure you want to clear all processing history? Your compressed photos in gallery will not be deleted.") },
             confirmButton = {
                 TextButton(
@@ -72,6 +82,32 @@ fun HistoryScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showClearDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    entryToDelete?.let { entry ->
+        AlertDialog(
+            onDismissRequest = { entryToDelete = null },
+            title = { Text("Delete History Record", fontWeight = FontWeight.Bold) },
+            text = { Text("Remove \"${entry.outputFileName.ifEmpty { entry.inputFileName }}\" from history? (The photo in your gallery will not be deleted)") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.deleteEntry(entry.id)
+                        if (selectedEntry?.id == entry.id) {
+                            selectedEntry = null
+                        }
+                        entryToDelete = null
+                    }
+                ) {
+                    Text("Delete", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { entryToDelete = null }) {
                     Text("Cancel")
                 }
             }
@@ -215,81 +251,134 @@ fun HistoryScreen(
                     }
                 }
 
-                if (onNavigateToEdit != null && !entry.outputUri.isNullOrEmpty()) {
-                    OutlinedButton(
-                        onClick = {
-                            onNavigateToEdit(Uri.parse(entry.outputUri))
-                            selectedEntry = null
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(44.dp),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Icon(Icons.Filled.Edit, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text("Fine-tune / Re-process")
+                val targetUriStr = entry.outputUri ?: entry.inputUri
+                if (!targetUriStr.isNullOrEmpty() && (onNavigateToTool != null || onNavigateToEdit != null)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            text = "Re-process with ScanFlow Tools:",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            listOf(
+                                "compress" to "Compress",
+                                "resize" to "Resize",
+                                "crop" to "Crop",
+                                "convert" to "Convert"
+                            ).forEach { (toolKey, toolLabel) ->
+                                OutlinedButton(
+                                    onClick = {
+                                        val uri = Uri.parse(targetUriStr)
+                                        if (onNavigateToTool != null) {
+                                            onNavigateToTool(uri, toolKey)
+                                        } else {
+                                            onNavigateToEdit?.invoke(uri)
+                                        }
+                                        selectedEntry = null
+                                    },
+                                    modifier = Modifier.weight(1f),
+                                    shape = RoundedCornerShape(10.dp),
+                                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp)
+                                ) {
+                                    Text(toolLabel, style = MaterialTheme.typography.labelSmall)
+                                }
+                            }
+                        }
                     }
+                }
+
+                TextButton(
+                    onClick = {
+                        val toDelete = entry
+                        selectedEntry = null
+                        entryToDelete = toDelete
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Filled.DeleteOutline, null, Modifier.size(18.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("Delete this Record from History")
                 }
                 Spacer(Modifier.height(16.dp))
             }
         }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-    ) {
-        // Sticky Header (Google Stitch)
-        ScanFlowHeader(
-            title = "History"
-        )
-
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        containerColor = MaterialTheme.colorScheme.background
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .background(MaterialTheme.colorScheme.background)
         ) {
-            // Header Intro
-            item {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 4.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column {
-                        Text(
-                            text = "History",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = "Review and manage your local optimizations",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+            // Sticky Header (Google Stitch)
+            ScanFlowHeader(
+                title = "History"
+            )
 
-                    Surface(
-                        shape = CircleShape,
-                        color = MaterialTheme.colorScheme.surfaceContainer,
-                        modifier = Modifier.size(40.dp)
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                // Header Intro
+                item {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 4.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Box(contentAlignment = Alignment.Center) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "History",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Review and manage your local optimizations",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+
+                        FilledTonalIconButton(
+                            onClick = {
+                                try {
+                                    val galleryIntent = Intent(Intent.ACTION_VIEW).apply {
+                                        type = "image/*"
+                                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                    }
+                                    context.startActivity(galleryIntent)
+                                } catch (e: Exception) {
+                                    Toast.makeText(context, "Cannot open gallery", Toast.LENGTH_SHORT).show()
+                                }
+                            },
+                            modifier = Modifier.size(40.dp),
+                            shape = CircleShape,
+                            colors = IconButtonDefaults.filledTonalIconButtonColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                contentColor = Primary
+                            )
+                        ) {
                             Icon(
-                                imageVector = Icons.Filled.AutoAwesome,
-                                contentDescription = null,
-                                tint = Primary,
+                                imageVector = Icons.Filled.PhotoLibrary,
+                                contentDescription = "Open Device Gallery",
                                 modifier = Modifier.size(20.dp)
                             )
                         }
                     }
                 }
-            }
 
             // Summary Metrics Banner (Stitch Bento)
             item {
@@ -426,9 +515,12 @@ fun HistoryScreen(
                         val filters = listOf(
                             "all" to "All",
                             "compress" to "Compress",
-                            "batch" to "Batch",
                             "resize" to "Resize",
-                            "pdf" to "PDF"
+                            "convert" to "Convert",
+                            "crop" to "Crop",
+                            "rotate" to "Rotate",
+                            "pdf" to "PDF",
+                            "batch" to "Batch"
                         )
                         items(filters) { (key, label) ->
                             val isSelected = selectedFilter == key
@@ -460,9 +552,12 @@ fun HistoryScreen(
 
                 val matchesFilter = when (selectedFilter) {
                     "compress" -> item.operation == OperationType.COMPRESS
-                    "batch" -> item.operation == OperationType.BATCH
                     "resize" -> item.operation == OperationType.RESIZE
+                    "convert" -> item.operation == OperationType.CONVERT
+                    "crop" -> item.operation == OperationType.CROP
+                    "rotate" -> item.operation == OperationType.ROTATE
                     "pdf" -> item.operation == OperationType.PDF
+                    "batch" -> item.operation == OperationType.BATCH
                     else -> true
                 }
                 matchesQuery && matchesFilter
@@ -505,15 +600,41 @@ fun HistoryScreen(
                     }
                 }
             } else {
-                items(filteredList) { entry ->
+                items(filteredList, key = { it.id }) { entry ->
+                    val uriStr = entry.outputUri ?: entry.inputUri
                     StitchHistoryCard(
                         entry = entry,
                         onClick = { selectedEntry = entry },
-                        onShareClick = {
-                            val uriStr = entry.outputUri ?: entry.inputUri
+                        onViewClick = {
                             if (!uriStr.isNullOrEmpty()) {
-                                ShareHelper.shareImage(context, Uri.parse(uriStr), "image/*", "Share File")
+                                try {
+                                    val viewIntent = Intent(Intent.ACTION_VIEW).apply {
+                                        setDataAndType(
+                                            Uri.parse(uriStr),
+                                            if (uriStr.endsWith(".pdf", ignoreCase = true)) "application/pdf" else "image/*"
+                                        )
+                                        flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK
+                                    }
+                                    context.startActivity(viewIntent)
+                                } catch (e: Exception) {
+                                    Toast.makeText(context, "Cannot open viewer", Toast.LENGTH_SHORT).show()
+                                }
+                            } else {
+                                Toast.makeText(context, "File path unavailable", Toast.LENGTH_SHORT).show()
                             }
+                        },
+                        onShareClick = {
+                            if (!uriStr.isNullOrEmpty()) {
+                                ShareHelper.shareImage(
+                                    context,
+                                    Uri.parse(uriStr),
+                                    if (uriStr.endsWith(".pdf", ignoreCase = true)) "application/pdf" else "image/*",
+                                    "Share File"
+                                )
+                            }
+                        },
+                        onDeleteClick = {
+                            entryToDelete = entry
                         }
                     )
                 }
@@ -558,6 +679,8 @@ fun HistoryScreen(
         }
     }
 }
+}
+
 
 /**
  * Single Activity Feed Card (Google Stitch)
@@ -566,7 +689,9 @@ fun HistoryScreen(
 private fun StitchHistoryCard(
     entry: ProcessingHistory,
     onClick: () -> Unit,
-    onShareClick: () -> Unit
+    onViewClick: () -> Unit,
+    onShareClick: () -> Unit,
+    onDeleteClick: () -> Unit
 ) {
     Card(
         modifier = Modifier
@@ -679,10 +804,11 @@ private fun StitchHistoryCard(
             // Actions Row
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Button(
-                    onClick = onClick,
+                    onClick = onViewClick,
                     modifier = Modifier
                         .weight(1f)
                         .height(38.dp),
@@ -695,7 +821,7 @@ private fun StitchHistoryCard(
                 ) {
                     Icon(Icons.Filled.Visibility, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text("Open", style = MaterialTheme.typography.labelMedium)
+                    Text("View", style = MaterialTheme.typography.labelMedium)
                 }
 
                 Button(
@@ -713,6 +839,22 @@ private fun StitchHistoryCard(
                     Icon(Icons.Filled.Share, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(6.dp))
                     Text("Share", style = MaterialTheme.typography.labelMedium)
+                }
+
+                FilledTonalIconButton(
+                    onClick = onDeleteClick,
+                    modifier = Modifier.size(38.dp),
+                    shape = RoundedCornerShape(8.dp),
+                    colors = IconButtonDefaults.filledTonalIconButtonColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.6f),
+                        contentColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.DeleteOutline,
+                        contentDescription = "Delete record",
+                        modifier = Modifier.size(18.dp)
+                    )
                 }
             }
         }

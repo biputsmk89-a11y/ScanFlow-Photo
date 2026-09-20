@@ -279,7 +279,7 @@ fun HomeScreen(
                                             Text(
                                                 text = "Typical reduction ~85%",
                                                 style = MaterialTheme.typography.labelSmall,
-                                                color = MaterialTheme.colorScheme.outline
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
                                             )
                                         }
                                     }
@@ -321,7 +321,7 @@ fun HomeScreen(
                             text = "One-Tap Utility",
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.outline
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
 

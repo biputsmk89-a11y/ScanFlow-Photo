@@ -58,9 +58,16 @@ class FileNamingEngine @Inject constructor() {
     fun generateFileName(
         originalName: String,
         operationType: OperationType = OperationType.COMPRESS,
-        targetFormat: ImageFormat = ImageFormat.JPEG
+        targetFormat: ImageFormat = ImageFormat.JPEG,
+        namingConfig: com.scanflow.photocompressor.domain.model.FileNamingConfig? = null
     ): String {
         val baseName = sanitizeBaseName(originalName)
+        val prefixedBase = namingConfig?.getEffectivePrefix(baseName) ?: baseName
+        val timestampPart = if (namingConfig?.includeTimestamp == true) {
+            val sdf = java.text.SimpleDateFormat("yyyyMMdd_HHmmss", java.util.Locale.US)
+            "_" + sdf.format(java.util.Date())
+        } else ""
+
         val ext = if (operationType == OperationType.PDF) "pdf" else targetFormat.extension
 
         val suffix = when (operationType) {
@@ -77,7 +84,7 @@ class FileNamingEngine @Inject constructor() {
             OperationType.WHATSAPP -> "whatsapp"
         }
 
-        return "${baseName}_${suffix}.${ext}"
+        return "${prefixedBase}${timestampPart}_${suffix}.${ext}"
     }
 
     /**

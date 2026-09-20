@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.scanflow.photocompressor.domain.model.*
 import com.scanflow.photocompressor.domain.repository.ImageRepository
 import com.scanflow.photocompressor.domain.usecase.ConvertFormatUseCase
+import com.scanflow.photocompressor.domain.repository.PreferencesRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -34,10 +35,26 @@ data class ConvertUiState(
 @HiltViewModel
 class ConvertViewModel @Inject constructor(
     private val convertFormatUseCase: ConvertFormatUseCase,
-    private val imageRepository: ImageRepository
+    private val imageRepository: ImageRepository,
+    private val preferencesRepository: PreferencesRepository? = null
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(ConvertUiState())
     val uiState: StateFlow<ConvertUiState> = _uiState.asStateFlow()
+
+    init {
+        preferencesRepository?.let { repo ->
+            viewModelScope.launch {
+                repo.preferencesFlow.first().let { prefs ->
+                    _uiState.update { current ->
+                        current.copy(
+                            targetFormat = prefs.defaultFormat,
+                            quality = prefs.defaultQuality
+                        )
+                    }
+                }
+            }
+        }
+    }
 
     fun selectImage(uri: Uri) {
         viewModelScope.launch {

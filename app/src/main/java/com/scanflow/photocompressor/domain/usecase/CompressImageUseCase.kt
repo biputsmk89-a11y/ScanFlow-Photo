@@ -7,6 +7,7 @@ import com.scanflow.photocompressor.domain.repository.ImageRepository
 import com.scanflow.photocompressor.engine.CompressionEngine
 import com.scanflow.photocompressor.engine.ResizeEngine
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
@@ -19,7 +20,8 @@ class CompressImageUseCase @Inject constructor(
     private val compressionEngine: CompressionEngine,
     private val resizeEngine: ResizeEngine,
     private val imagePipelineEngine: com.scanflow.photocompressor.engine.ImagePipelineEngine? = null,
-    private val entitlementRepository: com.scanflow.photocompressor.domain.repository.EntitlementRepository? = null
+    private val entitlementRepository: com.scanflow.photocompressor.domain.repository.EntitlementRepository? = null,
+    private val preferencesRepository: com.scanflow.photocompressor.domain.repository.PreferencesRepository? = null
 ) {
     /**
      * Compress an image with the given parameters.
@@ -163,11 +165,15 @@ class CompressImageUseCase @Inject constructor(
         }
     }
 
-    private fun generateOutputFileName(originalName: String, format: ImageFormat): String {
+    private suspend fun generateOutputFileName(originalName: String, format: ImageFormat): String {
+        val namingConfig = preferencesRepository?.preferencesFlow?.let { flow ->
+            runCatching { flow.first().namingConfig }.getOrNull()
+        }
         return com.scanflow.photocompressor.data.storage.FileNamingEngine().generateFileName(
             originalName = originalName,
             operationType = OperationType.COMPRESS,
-            targetFormat = format
+            targetFormat = format,
+            namingConfig = namingConfig
         )
     }
 }

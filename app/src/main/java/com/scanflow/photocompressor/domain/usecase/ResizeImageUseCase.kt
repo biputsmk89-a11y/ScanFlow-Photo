@@ -6,6 +6,7 @@ import com.scanflow.photocompressor.domain.repository.HistoryRepository
 import com.scanflow.photocompressor.domain.repository.ImageRepository
 import com.scanflow.photocompressor.engine.ResizeEngine
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
@@ -16,7 +17,8 @@ class ResizeImageUseCase @Inject constructor(
     private val imageRepository: ImageRepository,
     private val historyRepository: HistoryRepository,
     private val resizeEngine: ResizeEngine,
-    private val imagePipelineEngine: com.scanflow.photocompressor.engine.ImagePipelineEngine? = null
+    private val imagePipelineEngine: com.scanflow.photocompressor.engine.ImagePipelineEngine? = null,
+    private val preferencesRepository: com.scanflow.photocompressor.domain.repository.PreferencesRepository? = null
 ) {
     /**
      * Resize an image to the specified dimensions.
@@ -94,10 +96,14 @@ class ResizeImageUseCase @Inject constructor(
                 }
             }
 
+            val namingConfig = preferencesRepository?.preferencesFlow?.let { flow ->
+                runCatching { flow.first().namingConfig }.getOrNull()
+            }
             val outputFileName = com.scanflow.photocompressor.data.storage.FileNamingEngine().generateFileName(
                 originalName = imageInfo.fileName,
                 operationType = OperationType.RESIZE,
-                targetFormat = format
+                targetFormat = format,
+                namingConfig = namingConfig
             )
             val outputUri = imageRepository.saveBitmap(resized, outputFileName, format, quality)
             val outputSize = imageRepository.getFileSize(outputUri)

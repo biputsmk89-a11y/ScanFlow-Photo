@@ -9,14 +9,17 @@ import android.os.Environment
 import android.provider.MediaStore
 import com.scanflow.photocompressor.data.storage.FileManager
 import com.scanflow.photocompressor.data.storage.FileNamingEngine
+import com.scanflow.photocompressor.domain.model.ConflictStrategy
 import com.scanflow.photocompressor.domain.model.ImageFormat
 import com.scanflow.photocompressor.domain.model.ImageInfo
 import com.scanflow.photocompressor.domain.model.ValidationResult
 import com.scanflow.photocompressor.domain.repository.ImageRepository
+import com.scanflow.photocompressor.domain.repository.PreferencesRepository
 import com.scanflow.photocompressor.engine.BitmapUtils
 import com.scanflow.photocompressor.engine.OutputValidator
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
@@ -39,6 +42,7 @@ class ImageRepositoryImpl @Inject constructor(
     private val bitmapUtils: BitmapUtils,
     private val fileManager: FileManager,
     private val outputValidator: OutputValidator,
+    private val preferencesRepository: PreferencesRepository,
     private val fileNamingEngine: FileNamingEngine = FileNamingEngine()
 ) : ImageRepository {
 
@@ -134,14 +138,16 @@ class ImageRepositoryImpl @Inject constructor(
         fileName: String,
         format: ImageFormat
     ): Uri = withContext(Dispatchers.IO) {
+        val prefs = preferencesRepository.preferencesFlow.first()
+        val strategy = prefs.behavior.conflictStrategy
         val sanitizedBase = fileNamingEngine.sanitizeBaseName(fileName)
         val ext = format.extension
         val cleanCandidateName = "$sanitizedBase.$ext"
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            saveTempToMediaStore(tempFile, cleanCandidateName, format)
+            saveTempToMediaStore(tempFile, cleanCandidateName, format, strategy)
         } else {
-            saveTempToFile(tempFile, cleanCandidateName)
+            saveTempToFile(tempFile, cleanCandidateName, strategy)
         }
     }
 
@@ -152,10 +158,20 @@ class ImageRepositoryImpl @Inject constructor(
     private fun saveTempToMediaStore(
         tempFile: File,
         fileName: String,
-        format: ImageFormat
+        format: ImageFormat,
+        strategy: ConflictStrategy
     ): Uri {
-        val finalFileName = fileNamingEngine.resolveConflict(fileName) { candidate ->
+        val finalFileName = fileNamingEngine.resolveConflict(fileName, strategy) { candidate ->
             isMediaStoreFileExists(candidate)
+        }
+
+        // If overwrite is selected and file exists in MediaStore, clean up previous row first
+        if (strategy == ConflictStrategy.OVERWRITE && isMediaStoreFileExists(finalFileName)) {
+            runCatching {
+                val selection = "${MediaStore.MediaColumns.DISPLAY_NAME} = ? AND ${MediaStore.MediaColumns.RELATIVE_PATH} LIKE ?"
+                val selectionArgs = arrayOf(finalFileName, "${Environment.DIRECTORY_PICTURES}/PhotoCompressor%")
+                context.contentResolver.delete(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, selection, selectionArgs)
+            }
         }
 
         val contentValues = ContentValues().apply {
@@ -197,10 +213,11 @@ class ImageRepositoryImpl @Inject constructor(
      */
     private fun saveTempToFile(
         tempFile: File,
-        fileName: String
+        fileName: String,
+        strategy: ConflictStrategy
     ): Uri {
-        val destFile = fileNamingEngine.resolveFileConflict(outputDir, fileName)
-        tempFile.copyTo(destFile, overwrite = false)
+        val destFile = fileNamingEngine.resolveFileConflict(outputDir, fileName, strategy)
+        tempFile.copyTo(destFile, overwrite = (strategy == ConflictStrategy.OVERWRITE))
         return Uri.fromFile(destFile)
     }
 
