@@ -1,0 +1,37 @@
+#!/bin/sh
+# ScanFlow Photo - Security Guard Pre-Commit Hook
+# Blocks sensitive files, keys, and credentials from ever being committed to Git.
+
+echo "[Security Guard] Inspecting staged files for confidential leaks..."
+
+# 1. Block prohibited file extensions and sensitive file names
+FORBIDDEN_PATTERNS="\.jks$|\.keystore$|keystore\.properties$|local\.properties$|\.pem$|\.key$|service-account.*\.json$"
+
+LEAKED_FILES=$(git diff --cached --name-only | grep -E "$FORBIDDEN_PATTERNS")
+
+if [ -n "$LEAKED_FILES" ]; then
+    echo ""
+    echo "❌ [SECURITY ALERT] COMMIT BLOCKED!"
+    echo "The following confidential/sensitive files are staged for commit:"
+    echo "$LEAKED_FILES"
+    echo ""
+    echo "Your project security policy strictly forbids committing keystores or secret credential files."
+    echo "Please unstage them using: git reset HEAD <file>"
+    exit 1
+fi
+
+# 2. Block potential hardcoded password patterns in staged code
+SUSPICIOUS_CONTENT=$(git diff --cached -S "KEYSTORE_PASSWORD=" --name-only | grep -v ".githooks")
+
+if [ -n "$SUSPICIOUS_CONTENT" ]; then
+    echo ""
+    echo "❌ [SECURITY ALERT] COMMIT BLOCKED!"
+    echo "Detected hardcoded production credentials staged in:"
+    echo "$SUSPICIOUS_CONTENT"
+    echo ""
+    echo "Please remove hardcoded credentials before committing."
+    exit 1
+fi
+
+echo "✅ [Security Guard] No confidential leaks detected. Proceeding with commit."
+exit 0

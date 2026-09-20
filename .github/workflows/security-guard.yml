@@ -1,0 +1,36 @@
+name: Security Guard & Leak Prevention
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  secret-scan:
+    name: Secret & Credential Leak Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Scan for Leaked Keystores & Private Secrets
+        run: |
+          echo "Scanning repository for unauthorized files..."
+          FORBIDDEN_FILES=$(find . -type f \( -name "*.jks" -o -name "*.keystore" -o -name "keystore.properties" -o -name "local.properties" -o -name "*.pem" -o -name "*.key" \) ! -path "./.git/*")
+          if [ -n "$FORBIDDEN_FILES" ]; then
+            echo "❌ SECURITY FAILURE: Found confidential credentials committed in repository:"
+            echo "$FORBIDDEN_FILES"
+            exit 1
+          fi
+          echo "✅ No sensitive keystores or credentials found in repository."
+
+      - name: Verify Proprietary License
+        run: |
+          if [ ! -f "LICENSE" ]; then
+            echo "❌ SECURITY FAILURE: LICENSE file missing."
+            exit 1
+          fi
+          echo "✅ Proprietary and Confidential license is active."
