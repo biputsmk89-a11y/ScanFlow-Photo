@@ -22,6 +22,7 @@ class SegmentationModelManager @Inject constructor() {
         return activeSegmenter ?: run {
             val options = SelfieSegmenterOptions.Builder()
                 .setDetectorMode(SelfieSegmenterOptions.SINGLE_IMAGE_MODE)
+                .enableRawSizeMask()
                 .build()
             val segmenter = Segmentation.getClient(options)
             activeSegmenter = segmenter

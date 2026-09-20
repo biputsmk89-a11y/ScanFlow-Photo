@@ -71,9 +71,9 @@ class CompositingEngine @Inject constructor() {
                 val fgG = (pixel shr 8) and 0xFF
                 val fgB = pixel and 0xFF
 
-                val outR = (fgR * a + bgR * (255 - a)) / 255
-                val outG = (fgG * a + bgG * (255 - a)) / 255
-                val outB = (fgB * a + bgB * (255 - a)) / 255
+                val outR = ((fgR * a + bgR * (255 - a) + 127) / 255).coerceIn(0, 255)
+                val outG = ((fgG * a + bgG * (255 - a) + 127) / 255).coerceIn(0, 255)
+                val outB = ((fgB * a + bgB * (255 - a) + 127) / 255).coerceIn(0, 255)
 
                 compositePixels[i] = (0xFF shl 24) or (outR shl 16) or (outG shl 8) or outB
             }

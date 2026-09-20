@@ -34,17 +34,29 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var preferencesRepository: PreferencesRepository
 
+    @Inject
+    lateinit var onboardingRepository: com.scanflow.photocompressor.domain.repository.OnboardingRepository
+
     private val incomingSharedUris = mutableStateOf<List<Uri>?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        installSplashScreen()
+        val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        var isStateReady = false
+        splashScreen.setKeepOnScreenCondition { !isStateReady }
 
         handleIncomingIntent(intent)
 
         setContent {
             val preferences by preferencesRepository.preferencesFlow.collectAsState(initial = AppPreferences())
+            val onboardingState by onboardingRepository.onboardingStateFlow.collectAsState(initial = null)
+
+            if (onboardingState != null) {
+                isStateReady = true
+            }
+
             val isDarkTheme = when (preferences.theme) {
                 ThemeMode.SYSTEM -> isSystemInDarkTheme()
                 ThemeMode.LIGHT -> false
@@ -56,10 +68,14 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    PhotoCompressorApp(
-                        incomingSharedUris = incomingSharedUris.value,
-                        onSharedUrisHandled = { incomingSharedUris.value = null }
-                    )
+                    if (onboardingState != null) {
+                        PhotoCompressorApp(
+                            hasCompletedOnboarding = onboardingState?.hasCompleted == true,
+                            incomingSharedUris = incomingSharedUris.value,
+                            onSharedUrisHandled = { incomingSharedUris.value = null },
+                            onExitApp = { finish() }
+                        )
+                    }
                 }
             }
         }

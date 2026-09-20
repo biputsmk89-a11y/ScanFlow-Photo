@@ -121,4 +121,40 @@
     <string name="theme_light_desc">Polished light experience (Primary)</string>
     <string name="theme_dark">Dark</string>
     <string name="theme_dark_desc">Sleek dark theme for low light</string>
+
+    <!-- First-Launch Onboarding & Tutorial -->
+    <string name="onboarding_skip">Skip</string>
+    <string name="onboarding_next">Next</string>
+    <string name="onboarding_get_started">Start Using ScanFlow Foto</string>
+    <string name="onboarding_page_indicator_semantic">Page %1$d of %2$d</string>
+    <string name="onboarding_page1_brand">ScanFlow Foto</string>
+    <string name="onboarding_page1_tagline">Photo Compressor + Tools</string>
+    <string name="onboarding_page1_title">Welcome to ScanFlow Foto</string>
+    <string name="onboarding_page1_subtitle">Compress, resize, crop, and convert your photos in one simple app.</string>
+    <string name="onboarding_page1_secondary">Fast, clean, and built for everyday image tasks.</string>
+    <string name="onboarding_page2_title">Make Photos Smaller</string>
+    <string name="onboarding_page2_subtitle">Reduce image size while keeping your photos looking clear.</string>
+    <string name="onboarding_page2_before_label">Original</string>
+    <string name="onboarding_page2_before_val">8.4 MB</string>
+    <string name="onboarding_page2_after_label">Compressed</string>
+    <string name="onboarding_page2_after_val">720 KB</string>
+    <string name="onboarding_page2_saved_badge">91% Space Saved</string>
+    <string name="onboarding_page2_feat_target">Target File Size (e.g. 500 KB, 1 MB)</string>
+    <string name="onboarding_page2_feat_quality">Smart Multi-level Quality Control</string>
+    <string name="onboarding_page2_feat_resize">Custom Dimensions &amp; Aspect Ratios</string>
+    <string name="onboarding_page3_title">More Than Compression</string>
+    <string name="onboarding_page3_subtitle">Prepare photos for sharing, uploads, documents, and everyday use.</string>
+    <string name="onboarding_page3_tool_compress">Compress</string>
+    <string name="onboarding_page3_tool_resize">Resize</string>
+    <string name="onboarding_page3_tool_crop">Crop</string>
+    <string name="onboarding_page3_tool_convert">Convert</string>
+    <string name="onboarding_page3_tool_batch">Batch Mode</string>
+    <string name="onboarding_page3_tool_pdf">Image to PDF</string>
+    <string name="onboarding_page3_tool_passport">Passport &amp; ID</string>
+    <string name="onboarding_page3_tool_social">Social Media</string>
+    <string name="onboarding_page4_title">Private. Offline. Simple.</string>
+    <string name="onboarding_page4_subtitle">Core image processing happens locally on your device.</string>
+    <string name="onboarding_page4_point1">No cloud upload for core processing</string>
+    <string name="onboarding_page4_point2">Original photos stay protected</string>
+    <string name="onboarding_page4_point3">Fast local on-device processing</string>
 </resources>

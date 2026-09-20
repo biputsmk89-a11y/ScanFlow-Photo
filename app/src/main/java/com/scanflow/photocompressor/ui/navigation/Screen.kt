@@ -14,6 +14,9 @@ sealed class Screen(
     val title: String,
     val icon: ImageVector? = null
 ) {
+    // Startup & Onboarding gate
+    object Onboarding : Screen("onboarding", "Welcome")
+
     // Bottom nav destinations (Identik Google Stitch)
     object Home : Screen("home", "Home", Icons.Filled.Compress)
     object History : Screen("history", "History", Icons.Filled.History)

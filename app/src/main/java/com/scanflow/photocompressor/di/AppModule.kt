@@ -108,4 +108,8 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindAdManager(impl: com.scanflow.photocompressor.data.ad.AdManagerImpl): com.scanflow.photocompressor.domain.ad.AdManager
+
+    @Binds
+    @Singleton
+    abstract fun bindOnboardingRepository(impl: com.scanflow.photocompressor.data.repository.OnboardingRepositoryImpl): com.scanflow.photocompressor.domain.repository.OnboardingRepository
 }

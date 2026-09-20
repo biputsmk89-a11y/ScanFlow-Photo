@@ -18,6 +18,7 @@ class ColorDecontaminationProcessor @Inject constructor() {
 
     /**
      * Decontaminates edge pixels by propagating solid foreground color into transition pixels.
+     * Removes the dirty halo/fringe of the original background.
      */
     fun decontaminate(
         srcPixels: IntArray,
@@ -26,6 +27,11 @@ class ColorDecontaminationProcessor @Inject constructor() {
         height: Int,
         searchRadius: Int = DEFAULT_RADIUS
     ): IntArray {
+        val effectiveRadius = if (searchRadius == DEFAULT_RADIUS) {
+            maxOf(DEFAULT_RADIUS, minOf(width, height) / 100)
+        } else {
+            searchRadius
+        }
         val result = srcPixels.copyOf()
 
         for (y in 0 until height) {
@@ -36,10 +42,12 @@ class ColorDecontaminationProcessor @Inject constructor() {
 
                 // Only process transition boundary zone
                 if (a > 0.01f && a < 0.95f) {
-                    var bestColor = -1
-                    var minDistanceSq = Int.MAX_VALUE
+                    var sumR = 0
+                    var sumG = 0
+                    var sumB = 0
+                    var count = 0
 
-                    for (r in 1..searchRadius) {
+                    for (r in 1..effectiveRadius) {
                         val yMin = maxOf(0, y - r)
                         val yMax = minOf(height - 1, y + r)
                         val xMin = maxOf(0, x - r)
@@ -49,20 +57,27 @@ class ColorDecontaminationProcessor @Inject constructor() {
                             val nRow = ny * width
                             for (nx in xMin..xMax) {
                                 val nIdx = nRow + nx
-                                if (alpha[nIdx] >= 0.95f) {
+                                if (alpha[nIdx] >= 0.85f) {
                                     val distSq = (nx - x) * (nx - x) + (ny - y) * (ny - y)
-                                    if (distSq < minDistanceSq) {
-                                        minDistanceSq = distSq
-                                        bestColor = srcPixels[nIdx]
+                                    if (distSq <= r * r) {
+                                        val col = srcPixels[nIdx]
+                                        sumR += (col shr 16) and 0xFF
+                                        sumG += (col shr 8) and 0xFF
+                                        sumB += col and 0xFF
+                                        count++
                                     }
                                 }
                             }
                         }
-                        if (bestColor != -1) break
+                        if (count > 0) break
                     }
 
-                    if (bestColor != -1) {
-                        result[idx] = bestColor
+                    if (count > 0) {
+                        val origAlpha = (srcPixels[idx] ushr 24) and 0xFF
+                        val avgR = sumR / count
+                        val avgG = sumG / count
+                        val avgB = sumB / count
+                        result[idx] = (origAlpha shl 24) or (avgR shl 16) or (avgG shl 8) or avgB
                     }
                 }
             }

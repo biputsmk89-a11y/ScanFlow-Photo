@@ -50,10 +50,11 @@ class MaskRefinementEngine @Inject constructor() {
             cleanAlpha
         }
 
-        // Stage 5: Multi-pass Edge-aware Gaussian Smoothing (anti-aliased natural boundary)
+        // Stage 5: Multi-pass Edge-aware Gaussian/Separable Smoothing (anti-aliased natural boundary)
+        val baseRadius = maxOf(1, minOf(targetWidth, targetHeight) / 400)
         var smoothedAlpha = closedAlpha
         for (pass in 0 until options.edgeFeatherRadius) {
-            smoothedAlpha = smoothAlphaEdges(smoothedAlpha, targetWidth, targetHeight)
+            smoothedAlpha = smoothAlphaEdges(smoothedAlpha, targetWidth, targetHeight, radius = baseRadius)
         }
 
         return AlphaMask(targetWidth, targetHeight, smoothedAlpha)
@@ -234,25 +235,74 @@ class MaskRefinementEngine @Inject constructor() {
     }
 
     /**
-     * 3×3 edge-aware weighted Gaussian smoothing kernel.
-     * Only smooths pixels in the transition zone (0 < alpha < 1).
+     * Edge-aware smoothing kernel.
+     * Uses 3x3 weighted Gaussian for radius = 1, and separable sliding-window blur for radius > 1.
      */
-    fun smoothAlphaEdges(alpha: FloatArray, width: Int, height: Int): FloatArray {
-        val result = alpha.copyOf()
+    fun smoothAlphaEdges(alpha: FloatArray, width: Int, height: Int, radius: Int = 1): FloatArray {
+        if (radius <= 1) {
+            val result = alpha.copyOf()
+            for (y in 1 until height - 1) {
+                val rowOffset = y * width
+                for (x in 1 until width - 1) {
+                    val idx = rowOffset + x
+                    val center = alpha[idx]
 
-        for (y in 1 until height - 1) {
-            val rowOffset = y * width
-            for (x in 1 until width - 1) {
-                val idx = rowOffset + x
-                val center = alpha[idx]
-
-                if (center > 0f && center < 1f) {
-                    val sum =
-                        alpha[idx - width - 1]      + alpha[idx - width] * 2f + alpha[idx - width + 1] +
-                        alpha[idx - 1] * 2f          + center * 4f             + alpha[idx + 1] * 2f +
-                        alpha[idx + width - 1]       + alpha[idx + width] * 2f + alpha[idx + width + 1]
-                    result[idx] = (sum / 16f).coerceIn(0f, 1f)
+                    if (center > 0f && center < 1f) {
+                        val sum =
+                            alpha[idx - width - 1]      + alpha[idx - width] * 2f + alpha[idx - width + 1] +
+                            alpha[idx - 1] * 2f          + center * 4f             + alpha[idx + 1] * 2f +
+                            alpha[idx + width - 1]       + alpha[idx + width] * 2f + alpha[idx + width + 1]
+                        result[idx] = (sum / 16f).coerceIn(0f, 1f)
+                    }
                 }
+            }
+            return result
+        }
+
+        return separableBlur(alpha, width, height, radius)
+    }
+
+    private fun separableBlur(alpha: FloatArray, width: Int, height: Int, radius: Int): FloatArray {
+        val r = radius.coerceAtLeast(1)
+        val temp = FloatArray(width * height)
+        val result = FloatArray(width * height)
+
+        // Horizontal pass with sliding window
+        for (y in 0 until height) {
+            val rowOffset = y * width
+            var sum = 0f
+            val windowSize = r * 2 + 1
+
+            for (i in -r..r) {
+                val clampedX = i.coerceIn(0, width - 1)
+                sum += alpha[rowOffset + clampedX]
+            }
+            temp[rowOffset] = sum / windowSize
+
+            for (x in 1 until width) {
+                val removeX = (x - 1 - r).coerceIn(0, width - 1)
+                val addX = (x + r).coerceIn(0, width - 1)
+                sum += alpha[rowOffset + addX] - alpha[rowOffset + removeX]
+                temp[rowOffset + x] = (sum / windowSize).coerceIn(0f, 1f)
+            }
+        }
+
+        // Vertical pass with sliding window
+        for (x in 0 until width) {
+            var sum = 0f
+            val windowSize = r * 2 + 1
+
+            for (i in -r..r) {
+                val clampedY = i.coerceIn(0, height - 1)
+                sum += temp[clampedY * width + x]
+            }
+            result[x] = (sum / windowSize).coerceIn(0f, 1f)
+
+            for (y in 1 until height) {
+                val removeY = (y - 1 - r).coerceIn(0, height - 1)
+                val addY = (y + r).coerceIn(0, height - 1)
+                sum += temp[addY * width + x] - temp[removeY * width + x]
+                result[y * width + x] = (sum / windowSize).coerceIn(0f, 1f)
             }
         }
 

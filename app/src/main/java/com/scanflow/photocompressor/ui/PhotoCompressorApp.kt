@@ -35,8 +35,10 @@ import com.scanflow.photocompressor.ui.whatsapp.WhatsAppScreen
  */
 @Composable
 fun PhotoCompressorApp(
+    hasCompletedOnboarding: Boolean = true,
     incomingSharedUris: List<Uri>? = null,
-    onSharedUrisHandled: () -> Unit = {}
+    onSharedUrisHandled: () -> Unit = {},
+    onExitApp: () -> Unit = {}
 ) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -45,19 +47,23 @@ fun PhotoCompressorApp(
     var sharedUrisToHandle by remember { mutableStateOf<List<Uri>?>(null) }
     var activeToolInitialUri by remember { mutableStateOf<Uri?>(null) }
 
+    val startDestination = if (hasCompletedOnboarding) Screen.Home.route else Screen.Onboarding.route
+
     LaunchedEffect(incomingSharedUris) {
         if (!incomingSharedUris.isNullOrEmpty()) {
             sharedUrisToHandle = incomingSharedUris
-            if (incomingSharedUris.size == 1) {
-                navController.navigate(Screen.Compress.route) {
-                    launchSingleTop = true
+            if (hasCompletedOnboarding) {
+                if (incomingSharedUris.size == 1) {
+                    navController.navigate(Screen.Compress.route) {
+                        launchSingleTop = true
+                    }
+                } else {
+                    navController.navigate(Screen.Batch.route) {
+                        launchSingleTop = true
+                    }
                 }
-            } else {
-                navController.navigate(Screen.Batch.route) {
-                    launchSingleTop = true
-                }
+                onSharedUrisHandled()
             }
-            onSharedUrisHandled()
         }
     }
 
@@ -119,9 +125,36 @@ fun PhotoCompressorApp(
     ) { innerPadding ->
         NavHost(
             navController = navController,
-            startDestination = Screen.Home.route,
+            startDestination = startDestination,
             modifier = Modifier.padding(innerPadding)
         ) {
+            // First-Install Onboarding Gate
+            composable(Screen.Onboarding.route) {
+                com.scanflow.photocompressor.ui.onboarding.OnboardingScreen(
+                    onComplete = {
+                        navController.navigate(Screen.Home.route) {
+                            popUpTo(Screen.Onboarding.route) {
+                                inclusive = true
+                            }
+                            launchSingleTop = true
+                        }
+                        if (!sharedUrisToHandle.isNullOrEmpty()) {
+                            if (sharedUrisToHandle?.size == 1) {
+                                navController.navigate(Screen.Compress.route) {
+                                    launchSingleTop = true
+                                }
+                            } else {
+                                navController.navigate(Screen.Batch.route) {
+                                    launchSingleTop = true
+                                }
+                            }
+                            onSharedUrisHandled()
+                        }
+                    },
+                    onExitApp = onExitApp
+                )
+            }
+
             // Bottom nav destinations
             composable(Screen.Home.route) {
                 HomeScreen(

@@ -121,4 +121,40 @@
     <string name="theme_light_desc">Tampilan terang elegan (Utama)</string>
     <string name="theme_dark">Gelap</string>
     <string name="theme_dark_desc">Tema gelap nyaman untuk pencahayaan redup</string>
+
+    <!-- First-Launch Onboarding & Tutorial -->
+    <string name="onboarding_skip">Lewati</string>
+    <string name="onboarding_next">Lanjut</string>
+    <string name="onboarding_get_started">Mulai Gunakan ScanFlow Foto</string>
+    <string name="onboarding_page_indicator_semantic">Halaman %1$d dari %2$d</string>
+    <string name="onboarding_page1_brand">ScanFlow Foto</string>
+    <string name="onboarding_page1_tagline">Kompresor Foto &amp; Alat Gambar</string>
+    <string name="onboarding_page1_title">Selamat Datang di ScanFlow Foto</string>
+    <string name="onboarding_page1_subtitle">Kompres, ubah ukuran, potong, dan konversi foto Anda dalam satu aplikasi ringkas.</string>
+    <string name="onboarding_page1_secondary">Cepat, rapi, dan dirancang untuk kebutuhan foto sehari-hari.</string>
+    <string name="onboarding_page2_title">Perkecil Ukuran Foto</string>
+    <string name="onboarding_page2_subtitle">Hemat ruang penyimpanan sambil menjaga foto tetap jernih dan tajam.</string>
+    <string name="onboarding_page2_before_label">Ukuran Asli</string>
+    <string name="onboarding_page2_before_val">8.4 MB</string>
+    <string name="onboarding_page2_after_label">Hasil Kompresi</string>
+    <string name="onboarding_page2_after_val">720 KB</string>
+    <string name="onboarding_page2_saved_badge">Hemat 91% Ruang</string>
+    <string name="onboarding_page2_feat_target">Target Ukuran File (cth: 500 KB, 1 MB)</string>
+    <string name="onboarding_page2_feat_quality">Kontrol Kualitas Cerdas Berbagai Level</string>
+    <string name="onboarding_page2_feat_resize">Kustomisasi Dimensi &amp; Rasio Aspek</string>
+    <string name="onboarding_page3_title">Lebih Dari Sekadar Kompresi</string>
+    <string name="onboarding_page3_subtitle">Siapkan foto untuk dibagikan, diunggah, dokumen, dan kebutuhan harian.</string>
+    <string name="onboarding_page3_tool_compress">Kompres</string>
+    <string name="onboarding_page3_tool_resize">Resize</string>
+    <string name="onboarding_page3_tool_crop">Potong</string>
+    <string name="onboarding_page3_tool_convert">Konversi</string>
+    <string name="onboarding_page3_tool_batch">Mode Batch</string>
+    <string name="onboarding_page3_tool_pdf">Foto ke PDF</string>
+    <string name="onboarding_page3_tool_passport">Pasfoto &amp; ID</string>
+    <string name="onboarding_page3_tool_social">Sosial Media</string>
+    <string name="onboarding_page4_title">Privat. Offline. Sederhana.</string>
+    <string name="onboarding_page4_subtitle">Seluruh pemrosesan foto utama berjalan secara lokal di perangkat Anda.</string>
+    <string name="onboarding_page4_point1">Tanpa unggahan cloud untuk pemrosesan utama</string>
+    <string name="onboarding_page4_point2">Foto asli tetap aman dan terlindungi</string>
+    <string name="onboarding_page4_point3">Pemrosesan lokal cepat langsung di ponsel</string>
 </resources>

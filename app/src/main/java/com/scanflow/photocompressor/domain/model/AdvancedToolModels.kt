@@ -167,6 +167,11 @@ enum class SocialContentType(val displayName: String) {
     PROFILE("Profile")
 }
 
+enum class SocialFittingMode(val displayName: String) {
+    FIT("Fit (No Crop)"),
+    FILL("Fill (Crop)")
+}
+
 /**
  * Internal preset configuration. The user selects Platform and Content Type without
  * being forced to know or manage raw pixel dimensions.
