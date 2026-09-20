@@ -40,25 +40,27 @@ class MainActivity : ComponentActivity() {
     private val incomingSharedUris = mutableStateOf<List<Uri>?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        val splashScreen = installSplashScreen()
+        try {
+            installSplashScreen()
+        } catch (t: Throwable) {
+            android.util.Log.e("MainActivity", "SplashScreen init error ignored", t)
+        }
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
-
-        val startTime = System.currentTimeMillis()
-        var isStateReady = false
-        splashScreen.setKeepOnScreenCondition {
-            !isStateReady && (System.currentTimeMillis() - startTime < 1000L)
+        try {
+            enableEdgeToEdge()
+        } catch (t: Throwable) {
+            android.util.Log.e("MainActivity", "EdgeToEdge init error ignored", t)
         }
 
-        handleIncomingIntent(intent)
+        try {
+            handleIncomingIntent(intent)
+        } catch (t: Throwable) {
+            android.util.Log.e("MainActivity", "Intent handling error ignored", t)
+        }
 
         setContent {
             val preferences by preferencesRepository.preferencesFlow.collectAsState(initial = AppPreferences())
             val onboardingState by onboardingRepository.onboardingStateFlow.collectAsState(initial = null)
-
-            if (onboardingState != null) {
-                isStateReady = true
-            }
 
             val isDarkTheme = when (preferences.theme) {
                 ThemeMode.SYSTEM -> isSystemInDarkTheme()

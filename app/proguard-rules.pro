@@ -4,6 +4,9 @@
 # Application & Core Activities
 -keep class com.scanflow.photocompressor.PhotoCompressorApplication { *; }
 -keep class com.scanflow.photocompressor.MainActivity { *; }
+-keep class com.scanflow.photocompressor.Hilt_* { *; }
+-keep class * extends androidx.activity.ComponentActivity { *; }
+-keep class * extends android.app.Application { *; }
 
 # WorkManager Workers (Instantiated via reflection by Android OS)
 -keep class * extends androidx.work.ListenableWorker {

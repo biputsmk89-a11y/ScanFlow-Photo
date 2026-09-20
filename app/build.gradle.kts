@@ -9,14 +9,14 @@ plugins {
 
 android {
     namespace = "com.scanflow.photocompressor"
-    compileSdk = 36
+    compileSdk = 34
 
     defaultConfig {
         applicationId = "com.scanflow.photocompressor"
         minSdk = 26
-        targetSdk = 36
-        versionCode = 11
-        versionName = "1.1.1"
+        targetSdk = 34
+        versionCode = 12
+        versionName = "1.1.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
