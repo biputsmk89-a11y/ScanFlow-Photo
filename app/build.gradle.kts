@@ -3,24 +3,29 @@ import java.util.Properties
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.compose.compiler)
     alias(libs.plugins.hilt.android)
     alias(libs.plugins.ksp)
 }
 
 android {
     namespace = "com.scanflow.photocompressor"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.scanflow.photocompressor"
         minSdk = 26
         targetSdk = 34
-        versionCode = 12
-        versionName = "1.1.2"
+        versionCode = 15
+        versionName = "1.2.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
             useSupportLibrary = true
+        }
+
+        ndk {
+            abiFilters.addAll(listOf("arm64-v8a", "armeabi-v7a"))
         }
 
         // Room schema export
@@ -62,6 +67,8 @@ android {
                     keyPassword = keyPass
                     enableV1Signing = true
                     enableV2Signing = true
+                    enableV3Signing = true
+                    enableV4Signing = true
                 }
             }
         }
@@ -103,9 +110,7 @@ android {
         buildConfig = true
     }
 
-    composeOptions {
-        kotlinCompilerExtensionVersion = libs.versions.composeCompiler.get()
-    }
+    // Compose compiler is now configured via the org.jetbrains.kotlin.plugin.compose plugin (Kotlin 2.0+)
 
     testOptions {
         unitTests {

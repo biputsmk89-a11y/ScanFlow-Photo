@@ -16,6 +16,7 @@
 
 # Hilt Dependency Injection
 -keep class dagger.hilt.** { *; }
+-keep class dagger.** { *; }
 -keep class javax.inject.** { *; }
 -keep class * extends dagger.hilt.android.lifecycle.HiltViewModel { *; }
 -keep interface * extends dagger.hilt.internal.GeneratedComponent { *; }
@@ -23,6 +24,14 @@
 -keep @dagger.hilt.EntryPoint interface * { *; }
 -keep @dagger.hilt.InstallIn class * { *; }
 -keep class com.scanflow.photocompressor.di.** { *; }
+-keep class **.*_Factory { *; }
+-keep class **.*_MembersInjector { *; }
+-keep class **.*_HiltModules* { *; }
+
+# Data, Domain, and Engine Repositories (Prevent R8 stripping implementations)
+-keep class com.scanflow.photocompressor.data.** { *; }
+-keep class com.scanflow.photocompressor.domain.** { *; }
+-keep class com.scanflow.photocompressor.engine.** { *; }
 
 # Room Database & DAO
 -keep class androidx.room.** { *; }

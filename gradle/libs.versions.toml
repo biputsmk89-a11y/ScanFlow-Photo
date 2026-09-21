@@ -1,26 +1,24 @@
 [versions]
-agp = "8.2.2"
-kotlin = "1.9.22"
-ksp = "1.9.22-1.0.17"
-hilt = "2.50"
-room = "2.6.1"
-composeBom = "2024.02.00"
-composeCompiler = "1.5.8"
-navigationCompose = "2.7.7"
-coil = "2.5.0"
-coroutines = "1.7.3"
-lifecycleRuntime = "2.7.0"
-activityCompose = "1.8.2"
-coreKtx = "1.12.0"
+agp = "8.9.1"
+kotlin = "2.0.21"
+ksp = "2.0.21-1.0.28"
+hilt = "2.56.1"
+room = "2.7.1"
+composeBom = "2026.03.00"
+navigationCompose = "2.8.5"
+coil = "2.7.0"
+coroutines = "1.9.0"
+lifecycleRuntime = "2.8.7"
+activityCompose = "1.9.3"
+coreKtx = "1.15.0"
 junit = "4.13.2"
 junitExt = "1.1.5"
 espresso = "3.5.1"
 mockk = "1.13.9"
 turbine = "1.0.0"
-material3 = "1.2.0"
-work = "2.9.0"
-datastore = "1.0.0"
-coreSplashscreen = "1.0.1"
+work = "2.10.0"
+datastore = "1.1.4"
+coreSplashscreen = "1.2.0"
 
 [libraries]
 # AndroidX Core
@@ -39,7 +37,7 @@ androidx-compose-ui-tooling = { group = "androidx.compose.ui", name = "ui-toolin
 androidx-compose-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview" }
 androidx-compose-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
 androidx-compose-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
-androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3", version.ref = "material3" }
+androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3" }
 androidx-compose-material-icons-extended = { group = "androidx.compose.material", name = "material-icons-extended" }
 
 # Navigation
@@ -48,7 +46,7 @@ androidx-navigation-compose = { group = "androidx.navigation", name = "navigatio
 # Hilt
 hilt-android = { group = "com.google.dagger", name = "hilt-android", version.ref = "hilt" }
 hilt-android-compiler = { group = "com.google.dagger", name = "hilt-android-compiler", version.ref = "hilt" }
-hilt-navigation-compose = { group = "androidx.hilt", name = "hilt-navigation-compose", version = "1.1.0" }
+hilt-navigation-compose = { group = "androidx.hilt", name = "hilt-navigation-compose", version = "1.2.0" }
 
 # Room
 room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
@@ -65,7 +63,7 @@ kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-
 kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "coroutines" }
 
 # ExifInterface
-androidx-exifinterface = { group = "androidx.exifinterface", name = "exifinterface", version = "1.3.7" }
+androidx-exifinterface = { group = "androidx.exifinterface", name = "exifinterface", version = "1.4.1" }
 
 # WorkManager
 androidx-work-runtime-ktx = { group = "androidx.work", name = "work-runtime-ktx", version.ref = "work" }
@@ -85,5 +83,6 @@ androidx-arch-core-testing = { group = "androidx.arch.core", name = "core-testin
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 hilt-android = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
